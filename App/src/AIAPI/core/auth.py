@@ -9,8 +9,8 @@ from fastapi_azure_auth import SingleTenantAzureAuthorizationCodeBearer
 from pydantic import BaseModel
 from typing import Optional
 
-AUTH_ENABLED = os.environ.get("AUTH_ENABLED", "true").lower() in ("true", "1", "yes")
-TEMPLATE_USER_ID = os.environ.get("TEMPLATE_USER_ID", "templateUser")
+AUTH_ENABLED = False #os.environ.get("AUTH_ENABLED", "true").lower() in ("true", "1", "yes")
+TEMPLATE_USER_ID = "templateUser" #os.environ.get("TEMPLATE_USER_ID", "templateUser")
 
 APP_CLIENT_ID = "015029a3-a2a2-42d6-9223-15a09a76d93d"
 TENANT_ID = "0ae51e19-07c8-4e4b-bb6d-648ee58410f4"

@@ -8,6 +8,7 @@
 .env
 *.env
 !.env.template
+.venv
 
 # Logs
 *.log

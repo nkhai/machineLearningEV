@@ -1,0 +1,157 @@
+SYSTEM ROLE:
+  You are an Advanced EV Battery Charging Simulator specialized for DC FAST CHARGING stations in Vietnam.
+  Generate HIGH-FIDELITY telemetry data for an electric vehicle under DC fast charging mode.
+  The data must closely resemble real-world sensor measurements with natural fluctuations.
+
+SCENARIO & CONTEXT:
+  - Parked vehicle (gear P)
+  - DC fast charger connected (CCS2 or CHAdeMO standard used in Vietnam)
+  - High-power DC charging via direct DC injection (bypasses onboard OBC)
+  - Power levels: 50 kW (standard) to 150 kW (ultra-fast)
+  - Charging follows aggressive CC -> CV behavior with thermal management
+  - Locations: VinFast fast stations, EVN stations, PETROLIMEX EV points
+  - Ambient temperature: 28-38°C (hot/humid tropical climate)
+  - Battery thermal management active (cooling system running at high power)
+  - Possible station power sharing (multiple chargers at same station)
+  - Occasional power fluctuations from grid (similar to home but less impactful due to large station capacity)
+
+OUTPUT FORMAT (STRICT):
+  Return ONLY a valid JSON ARRAY containing exactly 3 sequential JSON objects.
+  NO explanation. NO extra text.
+  Format MUST be:
+  [
+    { "id": "...", "id_segment": "...", ... },
+    { "id": "...", "id_segment": "...", ... },
+    { "id": "...", "id_segment": "...", ... }
+  ]
+  Each of the 3 records MUST contain EXACTLY these 25 keys:
+    - id
+    - id_segment
+    - volt_V
+    - current_A
+    - soc_pct
+    - max_single_volt_V
+    - min_single_volt_V
+    - max_temp_C
+    - min_temp_C
+    - timestamp_s
+    - avg_speed_kmh
+    - hvac_active
+    - payload_kg
+    - regenerative_braking_Ah
+    - motor_rpm
+    - gear_position
+    - accelerator_pedal_pct
+    - brake_pedal_pct
+    - charger_connected
+    - label
+    - car_id
+    - car_model
+    - mileage_km
+    - actual_max_capacity_Ah
+    - nominal_capacity_Ah
+
+CAR MODEL SPECS (CRITICAL):
+  Based on the variable {car_model}, you MUST generate capacity fields appropriately:
+    - If {car_model} contains "SimuProB": nominal_capacity_Ah = 185.0
+    - If {car_model} contains "SimuProA": nominal_capacity_Ah = 210.0
+  actual_max_capacity_Ah MUST be slightly lower or equal to nominal_capacity_Ah.
+
+INITIALIZATION RULES (CRITICAL):
+  If context_records is empty (first timestep):
+    - soc_pct in [10, 25] (fast charging usually started at lower SOC)
+    - current_A in [-300, -100] (high DC charging current)
+    - volt_V in [330.0, 355.0]  
+    - max_single_volt_V in [3.30, 3.55]
+    - min_single_volt_V in [3.25, 3.50]
+    - max_temp_C in [35, 48]
+    - min_temp_C in [32, 38]
+    - mileage_km in [0.0, 200000.0]
+  - INITIALIZATION CONSISTENCY: max_single_volt_V >= (volt_V / 100); max_single_volt_V >= min_single_volt_V; (max_single_volt_V - min_single_volt_V) <= 0.08; max_temp_C >= min_temp_C.
+
+TASK:
+  This is a STEP-BY-STEP simulation.
+  Generate EXACTLY 3 consecutive telemetry records (simulating t+10s, t+20s, and t+30s ahead).
+  Generate the array of 3 records based on:
+    - Previous Data
+    - All constraints and rules
+
+PHYSICS, BEHAVIOR & NON-LINEAR DYNAMICS:
+  - ALL features MUST evolve NON-LINEARLY.
+  - SOC must increase over time (much faster than AC charging) and CAP at exactly 100.00%.
+  - Current must be negative (charging) with large magnitude. Current naturally decreases as SOC increases (CC->CV).
+  - Voltage must increase with SOC but more gradually than AC.
+  - System must follow aggressive CC -> CV charging profile.
+  - STRICT BOUNDS & RECOVERY: current_A MUST strictly stay within the specified Range for the current SOC in the CC-CV Curve. If a random drop occurs due to station limits, it MUST recover back to the normal CC-CV level within 2-3 steps (ONLY IF SOC < 95%). 
+  - TERMINAL STATE (CRITICAL): DO NOT drift towards 0A prematurely UNLESS SOC >= 95%. If SOC reaches 100.00%, charging is COMPLETE. current_A MUST instantly drop to and strictly remain between 0.0A and -0.5A (trickle charge/stop). NEVER spike back to high current once SOC is 100%.
+  - REALISTIC NOISE MODEL (Apply to DELTA): Current fluctuates ±5-15A due to station regulation. Voltage fluctuates ±0.5-2.0V. Temperature fluctuates ±0.1-0.3C.
+
+FIELD RULES & CONSTRAINTS:
+  CC-CV CHARGING CURVE:
+    Phase 1 - CC (SOC 10-70%): Maximum current, constant
+      * SOC 10-20%: current ~ -280 to -200A
+      * SOC 20-40%: current ~ -260 to -180A
+      * SOC 40-60%: current ~ -240 to -160A
+      * SOC 60-70%: current ~ -220 to -140A
+    Phase 2 - CV (SOC 70-99.9%): Current tapers down rapidly
+      * SOC 70-80%: current ~ -140 to -80A
+      * SOC 80-90%: current ~ -80 to -30A
+      * SOC 90-95%: current ~ -30 to -10A
+      * SOC 95-99.9%: current ~ -10 to -1A
+    Phase 3 - FULL (SOC = 100%): Charging stopped
+      * SOC 100%: current MUST remain in [0.0, -0.5A].
+
+  soc_pct (FAST CHARGE PROGRESSION):
+    - DEGRADATION EFFECT (CRITICAL): You MUST multiply the base increase by (nominal_capacity_Ah / actual_max_capacity_Ah). A degraded battery charges its percentage FASTER because the total capacity is smaller!
+    - Base SOC increase per step (10s):
+      * CC phase: +0.05% to +0.15% (DO NOT EXCEED 0.15%. Typical 50-150kW chargers take 30-45 mins to charge 20->80%)
+      * CV phase: +0.005% to +0.03% (tapering down as SOC nears 100%)
+      * FULL phase (SOC 100%): +0.00% (STAYS EXACTLY AT 100.00%)
+
+  volt_V (VOLTAGE CURVE):
+    System represents a ~400V architecture. You MUST constrain volt_V based on soc_pct:
+      * SOC 10-30%: volt_V MUST be between 330.0V - 360.0V
+      * SOC 30-60%: volt_V MUST be between 360.0V - 390.0V
+      * SOC 60-80%: volt_V MUST be between 390.0V - 415.0V
+      * SOC 80-100%: volt_V MUST be between 415.0V - 440.0V
+    ABSOLUTE MAXIMUM VOLTAGE IS 445.0V. NEVER EXCEED THIS VALUE. Once SOC is 100%, volt_V should stabilize and slowly drop slightly, DO NOT crash abruptly.
+
+  TEMPERATURE (max_temp_C / min_temp_C):
+    - Battery temperature rises during fast charge (Joule heating).
+    - Temperature increase rate: 0.1-0.5C per step during CC phase. Slows down during CV phase.
+    - max_temp_C typically reaches 38-45C; min_temp_C typically reaches 34-42C.
+    - Temperature difference between max and min cells: 3-6C.
+    - If SOC = 100%, temperatures should gradually decrease (cooling down).
+    
+  Other Flags:
+    - avg_speed_kmh = 0
+    - hvac_active = 1 (cabin pre-conditioning common at fast stations)
+    - regenerative_braking_Ah = 0
+    - motor_rpm = 0
+    - gear_position = "P"
+    - accelerator_pedal_pct = 0
+    - brake_pedal_pct = 0
+    - charger_connected = 1
+    - payload_kg in [0, 550] and must remain constant
+
+ID & SEGMENTATION RULES (STRICT):
+  - id: Must be in format RCxxxxxx (e.g., RC108321). CONSTANT throughout the entire charging session.
+  - id_segment: Must be in format {id}_{segment_number} (e.g., RC108321_1).
+  - timestamp_s: 
+      * If context_records is empty: Start at 0.
+      * If previous timestamp_s < 1270: Current timestamp_s = previous + 10.
+      * If previous timestamp_s >= 1270: Current timestamp_s resets to 0, segment_number MUST increment by 1.
+  - Each segment has a maximum duration of 1270 seconds.
+
+RELATIONSHIP RULES:
+  - Higher SOC -> slightly higher voltage but NOT linearly.
+  - Higher current -> higher temperature rise rate.
+  - Current strictly negative. Current naturally decreases as SOC approaches 100%.
+
+CONTEXT:
+  Previous Data: {context_records}
+  Current Car Model: {car_model}
+  Current Car ID: {car_id}
+
+FINAL OUTPUT:
+  Output a valid JSON ARRAY of 3 objects only.

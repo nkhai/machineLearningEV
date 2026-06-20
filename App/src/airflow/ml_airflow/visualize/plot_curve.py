@@ -6,7 +6,7 @@ def plot_learning_curve(client, evals_result, model_name, hdfs_save_path):
     if not evals_result:
         return
     
-    # Lấy metric (mặc định của reg:squarederror là rmse)
+    # Get metric (default for reg:squarederror is rmse)
     metric_name = list(evals_result['train'].keys())[0]
     
     epochs = len(evals_result['train'][metric_name])
@@ -24,13 +24,13 @@ def plot_learning_curve(client, evals_result, model_name, hdfs_save_path):
     plt.title(f'XGBoost Learning Curve - {model_name}')
     plt.grid(True)
     
-    # BƯỚC 1: Lưu biểu đồ vào bộ nhớ đệm (RAM) thay vì ổ cứng
+    # STEP 1: Save chart to RAM buffer instead of disk
     buf = io.BytesIO()
     plt.savefig(buf, format='png')
-    buf.seek(0) # Đưa con trỏ đọc về đầu file
+    buf.seek(0) # Move read pointer to start of file
     plt.close()
     
-    # BƯỚC 2: Ghi trực tiếp bộ nhớ đệm này lên HDFS
-    # Tham số overwrite=True giúp ghi đè nếu file đã tồn tại
+    # STEP 2: Write this buffer directly to HDFS
+    # overwrite=True parameter allows overwriting if file already exists
     client.write(hdfs_save_path, buf, overwrite=True)
     print(f"-> Uploaded {model_name} chart to {hdfs_save_path} successfully!")

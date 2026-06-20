@@ -1,16 +1,21 @@
 import io
 import json
+import os
+import re
 import numpy as np
 import xgboost as xgb
 import torch
 from collections import defaultdict
+from datetime import datetime, timedelta
 from sklearn.metrics import mean_squared_error
 from hdfs import InsecureClient
 from fastapi import APIRouter, HTTPException
 
-from api.schemas import TrainRequest
+from api.schemas import PredictRequest
+from fastapi import APIRouter, HTTPException, Depends, Request
 
 from core.config import HDFS_USER, NUM_FILES_LIMIT
+from core.auth import get_user, azure_scheme, AUTH_ENABLED, TEMPLATE_USER_ID
 from core.data_utils import (
     get_hdfs_files_filtered,
     load_data_universal,
@@ -24,7 +29,7 @@ from core.job_manager import submit_job, model_lock
 
 router = APIRouter()
 
-INFERENCE_BASE_DIR = "/raw_data/battery_telemetry_v2"
+INFERENCE_BASE_DIR = "/raw_data/battery_telemetry_v4"
 HDFS_MODEL_DIR = "/models/battery_health_ensemble"
 HDFS_IMAGE_DIR = "/models/learning_curve"
 
@@ -41,7 +46,7 @@ def _resolve_model_dir(client):
         return HDFS_MODEL_DIR
 
 
-def _run_predict_pipeline(job, hdfs_url: str):
+def _run_predict_pipeline(job, hdfs_url: str, car_ids: list, predict_date: str):
     """The actual inference logic, runs in a background thread."""
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     client = InsecureClient(hdfs_url, user=HDFS_USER, timeout=60)
@@ -69,17 +74,125 @@ def _run_predict_pipeline(job, hdfs_url: str):
     finally:
         model_lock.release_read()
 
-    # ── STEP 2: LOAD INFERENCE DATA ──
+# ── STEP 2: LOAD INFERENCE DATA ──
     job.progress = "Step 2/4: Loading inference data..."
     all_inf_files = get_hdfs_files_filtered(client, INFERENCE_BASE_DIR, limit=NUM_FILES_LIMIT)
 
-    target_inf_evs = ["EV_015", "EV_016"]
-    inf_files = [f for f in all_inf_files if any(ev in f for ev in target_inf_evs)]
+    # Filter by requested car_ids
+    inf_files = [f for f in all_inf_files if any(ev in f for ev in car_ids)]
 
     if not inf_files:
-        raise ValueError("No inference data found for target EVs on HDFS.")
+        raise ValueError(f"No inference data found for target EVs on HDFS.")
 
-    inf_raw = load_data_universal(client, inf_files, mode="inference")
+            # --- VALID DATE SEARCH LOGIC BY READING FILE CONTENT ---
+    final_inf_files = []
+    fallback_dates_used = []
+
+        # Group files by car
+    car_file_map = defaultdict(list)
+    for fp in inf_files:
+        for cid in car_ids:
+            if cid in fp:
+                car_file_map[cid].append(fp)
+
+    for cid in car_ids:
+        files_for_car = car_file_map.get(cid, [])
+        if not files_for_car:
+            continue
+
+        found_valid_data = False
+
+        # Group files by car and date
+        date_to_files = defaultdict(list)
+        for fp in files_for_car:
+            m = re.search(r'(\d{8})', os.path.basename(fp))
+            if m:
+                try:
+                    fd = datetime.strptime(m.group(1), "%Y%m%d")
+                    date_to_files[fd].append(fp)
+                except ValueError:
+                    pass
+        
+        if not date_to_files:
+            continue
+
+        if predict_date.lower() != "latest":
+            # --- CASE 1: FIND BY SPECIFIC DATE ---
+            try:
+                target_date = datetime.strptime(predict_date, "%Y%m%d")
+                candidate_files = date_to_files.get(target_date, [])
+            except ValueError:
+                candidate_files = []
+
+            if candidate_files:
+                # Try loading to check if there's valid data inside
+                temp_raw = load_data_universal(client, candidate_files, mode="inference", pad_short_windows=True)
+                if temp_raw:
+                    final_inf_files.extend(candidate_files)
+                    has_chg = any(meta.get("charger_connected") == 1 for _, meta, _ in temp_raw)
+                    has_drv = any(meta.get("charger_connected") == 0 for _, meta, _ in temp_raw)
+                    dual_label = "dual" if (has_chg and has_drv) else "single"
+                    fallback_dates_used.append(f"{predict_date} ({dual_label})")
+                    found_valid_data = True
+        else:
+            # --- CASE 2: "LATEST" - INDEPENDENTLY FIND NEWEST FOR CHARGING AND DRIVING ---
+            sorted_dates = sorted(date_to_files.keys(), reverse=True)
+            
+            found_chg = False
+            found_drv = False
+            chg_files = []
+            drv_files = []
+            chg_date_str = ""
+            drv_date_str = ""
+            
+            # Scan from newest date backward
+            for fd in sorted_dates:
+                candidate_files = date_to_files[fd]
+                temp_raw = load_data_universal(client, candidate_files, mode="inference", pad_short_windows=True)
+                
+                if not temp_raw:
+                    continue # Skip this date if no valid data can be extracted
+                
+                # If charging file not found yet, check if this date has charging data
+                if not found_chg:
+                    if any(meta.get("charger_connected") == 1 for _, meta, _ in temp_raw):
+                        chg_files = candidate_files
+                        chg_date_str = fd.strftime('%Y%m%d')
+                        found_chg = True
+                        
+                # If driving file not found yet, check if this date has driving data
+                if not found_drv:
+                    if any(meta.get("charger_connected") == 0 for _, meta, _ in temp_raw):
+                        drv_files = candidate_files
+                        drv_date_str = fd.strftime('%Y%m%d')
+                        found_drv = True
+                
+                # If both charging and driving found (may be on different dates), stop searching for this car
+                if found_chg and found_drv:
+                    break
+            
+            # Combine file lists (use set to remove duplicates if charging and driving are on the same date)
+            combined_files = list(set(chg_files + drv_files))
+            
+            if combined_files:
+                final_inf_files.extend(combined_files)
+                label_parts = []
+                if found_chg: label_parts.append(f"Chg:{chg_date_str}")
+                if found_drv: label_parts.append(f"Drv:{drv_date_str}")
+                fallback_dates_used.append(" + ".join(label_parts))
+                found_valid_data = True
+
+        if not found_valid_data:
+            print(f"[Warning] Could not find any valid snippets for {cid}.")
+
+    if not final_inf_files:
+        raise ValueError(f"No valid inference snippets found for any target EVs.")
+
+    print(f"[Info] Using dates: {dict(zip(car_ids, fallback_dates_used))}")
+
+    # Reload actual data (with pad_short_windows=True enabled)
+    inf_raw = load_data_universal(client, final_inf_files, mode="inference", pad_short_windows=True)
+
     inf_chg = filter_by_modality(inf_raw, is_charge=True)
     inf_drv = filter_by_modality(inf_raw, is_charge=False)
 
@@ -95,7 +208,7 @@ def _run_predict_pipeline(job, hdfs_url: str):
         if scaler_chg is not None:
             X_inf_chg = scaler_chg.transform(X_inf_chg)
         preds_chg = xgb_model_chg.predict(xgb.DMatrix(X_inf_chg))
-        for p, (_, meta) in zip(preds_chg, inf_chg):
+        for p, (_, meta, _) in zip(preds_chg, inf_chg):
             inf_preds_chg[meta["car_id"]].append(p)
             inf_true_cap[meta["car_id"]] = meta.get("actual_max_capacity_Ah", -1)
             inf_mileage[meta["car_id"]] = max(inf_mileage.get(meta["car_id"], 0), meta.get("mileage_km", 0))
@@ -105,7 +218,7 @@ def _run_predict_pipeline(job, hdfs_url: str):
         if scaler_drv is not None:
             X_inf_drv = scaler_drv.transform(X_inf_drv)
         preds_drv = xgb_model_drv.predict(xgb.DMatrix(X_inf_drv))
-        for p, (_, meta) in zip(preds_drv, inf_drv):
+        for p, (_, meta, _) in zip(preds_drv, inf_drv):
             inf_preds_drv[meta["car_id"]].append(p)
             inf_true_cap[meta["car_id"]] = meta.get("actual_max_capacity_Ah", -1)
             inf_mileage[meta["car_id"]] = max(inf_mileage.get(meta["car_id"], 0), meta.get("mileage_km", 0))
@@ -202,14 +315,25 @@ def _run_predict_pipeline(job, hdfs_url: str):
     }
 
 
-@router.post("/predict")
-def start_predict(request: TrainRequest):
+# Create a dynamic dependency based on environment variable
+auth_deps = [Depends(azure_scheme)] if AUTH_ENABLED else []
+
+# Attach auth_deps to endpoint
+@router.post("/predict", dependencies=auth_deps)
+def start_predict(
+    request: PredictRequest, 
+    fastapi_req: Request # Dùng biến này để lấy HTTP request gốc
+):
     """
     Submit a prediction/inference job to run in background (non-blocking).
-
-    Returns immediately with a job_id to poll status.
     """
     hdfs_url = request.HDFS_URL
+    car_ids = request.car_ids
+    predict_date = request.predict_date
+
+    # Get user_id from token or use template user
+    # Lấy từ Token nếu bật Auth, ngược lại lấy trực tiếp từ request body
+    user_id = get_user(fastapi_req).id if AUTH_ENABLED else request.user_id
 
     # Quick HDFS connectivity check before submitting
     try:
@@ -218,11 +342,41 @@ def start_predict(request: TrainRequest):
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Cannot connect to HDFS at {hdfs_url}: {e}")
 
-    job = submit_job("predict", hdfs_url, _run_predict_pipeline, hdfs_url)
+    # Validate car_ids exist in DB with use_to_predict=True
+    from core.database import SessionLocal
+    from core.models import Vehicle
+    db = SessionLocal()
+    try:
+        db_cars = db.query(Vehicle).filter(Vehicle.car_id.in_(car_ids), Vehicle.use_to_predict == True).all()
+        found_ids = {v.car_id for v in db_cars}
+    finally:
+        db.close()
+
+    missing = set(car_ids) - found_ids
+    if missing:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cars not found or use_to_predict=False: {list(missing)}. "
+                   f"Only cars with use_to_predict=True can be predicted."
+        )
+
+    # TRUYỀN USER_ID XUỐNG DATABASE
+    job = submit_job(
+        "predict", 
+        hdfs_url, 
+        _run_predict_pipeline, 
+        hdfs_url, 
+        car_ids, 
+        predict_date, 
+        user_id=user_id # <--- RECORD USER
+    )
 
     return {
         "status": "accepted",
         "message": "Prediction job submitted. Use /api/v1/jobs/{job_id} to check progress.",
         "job_id": job.job_id,
         "hdfs_url_used": hdfs_url,
+        "car_ids": car_ids,
+        "predict_date": predict_date,
+        "user_id": user_id
     }

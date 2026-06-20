@@ -11,8 +11,10 @@ router = APIRouter(tags=["vehicles"])
 
 class VehicleCreate(BaseModel):
     car_id: str
-    vehicle_name: str
+    car_name: str
     vin_number: str
+    user_id: str
+    use_to_predict: bool = True
     license_plate: Optional[str] = None
     battery_serial: Optional[str] = None
     motor_serial: Optional[str] = None
@@ -22,8 +24,10 @@ class VehicleCreate(BaseModel):
             "examples": [
                 {
                     "car_id": "EV_001",
-                    "vehicle_name": "VinFast VF8",
+                    "car_name": "VinFast VF8",
                     "vin_number": "VIN2026VF8X00001",
+                    "user_id": "vkn1hc",
+                    "use_to_predict": True,
                     "license_plate": "51A-12345",
                     "battery_serial": "BAT-VF8-001",
                     "motor_serial": "MOT-VF8-001",
@@ -34,7 +38,7 @@ class VehicleCreate(BaseModel):
 
 
 def _get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
-    """Extract the current user from the Azure AD token claims stored in request.state."""
+    """Extract the current user from Azure AD token claims stored in request.state."""
     if not AUTH_ENABLED:
         db_user = db.query(User).filter(User.user_id == TEMPLATE_USER_ID).first()
         if db_user is None:
@@ -51,7 +55,7 @@ def _get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
         db_user = User(
             user_id=username,
             user_name=name,
-            pw="",
+            pw=' ',
             phone_number=None,
             role="User",
         )
@@ -71,43 +75,50 @@ def create_vehicle(body: VehicleCreate, request: Request, db: Session = Depends(
 
     vehicle = Vehicle(
         car_id=body.car_id,
-        vehicle_name=body.vehicle_name,
+        car_name=body.car_name,
         vin_number=body.vin_number,
         license_plate=body.license_plate,
         battery_serial=body.battery_serial,
         motor_serial=body.motor_serial,
-        user_id=db_user.user_id,
+        use_to_predict=body.use_to_predict,
+        user_id=body.user_id,
     )
     db.add(vehicle)
     db.commit()
     db.refresh(vehicle)
     return {
         "car_id": vehicle.car_id,
-        "vehicle_name": vehicle.vehicle_name,
+        "car_name": vehicle.car_name,
         "vin_number": vehicle.vin_number,
         "license_plate": vehicle.license_plate,
         "battery_serial": vehicle.battery_serial,
         "motor_serial": vehicle.motor_serial,
+        "use_to_predict": vehicle.use_to_predict,
         "user_id": vehicle.user_id,
     }
 
 
 @router.get("/vehicles")
-def get_all_vehicles(request: Request, db: Session = Depends(get_db)):
-    """Get all vehicles belonging to the authenticated user."""
-    db_user = _get_current_user(request, db)
-    vehicles = db.query(Vehicle).filter(Vehicle.user_id == db_user.user_id).all()
+def get_all_vehicles(request: Request, db: Session = Depends(get_db), user_id: Optional[str] = None):
+    """Get all vehicles for the authenticated user, or filtered by user_id query param."""
+    if user_id:
+        target_user_id = user_id
+    else:
+        db_user = _get_current_user(request, db)
+        target_user_id = db_user.user_id
+    vehicles = db.query(Vehicle).filter(Vehicle.user_id == target_user_id).all()
     return {
-        "user_id": db_user.user_id,
+        "user_id": target_user_id,
         "total": len(vehicles),
         "vehicles": [
             {
                 "car_id": v.car_id,
-                "vehicle_name": v.vehicle_name,
+                "car_name": v.car_name,
                 "vin_number": v.vin_number,
                 "license_plate": v.license_plate,
                 "battery_serial": v.battery_serial,
                 "motor_serial": v.motor_serial,
+                "use_to_predict": v.use_to_predict,
             }
             for v in vehicles
         ],
@@ -115,40 +126,73 @@ def get_all_vehicles(request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/vehicles/{car_id}")
-def get_car_info(car_id: str, request: Request, db: Session = Depends(get_db)):
-    """Get a specific car's info. The car must belong to the authenticated user."""
-    db_user = _get_current_user(request, db)
+def get_car_info(car_id: str, request: Request, db: Session = Depends(get_db), user_id: Optional[str] = None):
+    """Get a specific car's info. The car must belong to the authenticated user or the user_id query param."""
+    if user_id:
+        target_user_id = user_id
+    else:
+        db_user = _get_current_user(request, db)
+        target_user_id = db_user.user_id
     vehicle = (
         db.query(Vehicle)
-        .filter(Vehicle.car_id == car_id, Vehicle.user_id == db_user.user_id)
+        .filter(Vehicle.car_id == car_id, Vehicle.user_id == target_user_id)
         .first()
     )
     if vehicle is None:
-        raise HTTPException(status_code=404, detail=f"Vehicle '{car_id}' not found for user '{db_user.user_id}'")
+        raise HTTPException(status_code=404, detail=f"Vehicle '{car_id}' not found for user '{target_user_id}'")
     return {
         "car_id": vehicle.car_id,
-        "vehicle_name": vehicle.vehicle_name,
+        "car_name": vehicle.car_name,
         "vin_number": vehicle.vin_number,
         "license_plate": vehicle.license_plate,
         "battery_serial": vehicle.battery_serial,
         "motor_serial": vehicle.motor_serial,
+        "use_to_predict": vehicle.use_to_predict,
         "user_id": vehicle.user_id,
     }
 
 
-@router.get("/vehicles/{car_id}/predictions")
-def get_predictions_by_car(car_id: str, request: Request, db: Session = Depends(get_db)):
-    """Get all prediction results for a specific car, sorted by timestamp (newest first)."""
-    db_user = _get_current_user(request, db)
-
-    # Ensure the car belongs to the authenticated user
+@router.patch("/vehicles/{car_id}/use_to_predict")
+def update_use_to_predict(car_id: str, request: Request, db: Session = Depends(get_db), user_id: Optional[str] = None):
+    """Toggle use_to_predict flag for a vehicle."""
+    if user_id:
+        target_user_id = user_id
+    else:
+        db_user = _get_current_user(request, db)
+        target_user_id = db_user.user_id
     vehicle = (
         db.query(Vehicle)
-        .filter(Vehicle.car_id == car_id, Vehicle.user_id == db_user.user_id)
+        .filter(Vehicle.car_id == car_id, Vehicle.user_id == target_user_id)
         .first()
     )
     if vehicle is None:
-        raise HTTPException(status_code=404, detail=f"Vehicle '{car_id}' not found for user '{db_user.user_id}'")
+        raise HTTPException(status_code=404, detail=f"Vehicle '{car_id}' not found for user '{target_user_id}'")
+    vehicle.use_to_predict = not vehicle.use_to_predict
+    db.commit()
+    db.refresh(vehicle)
+    return {
+        "car_id": vehicle.car_id,
+        "use_to_predict": vehicle.use_to_predict,
+    }
+
+
+@router.get("/vehicles/{car_id}/predictions")
+def get_predictions_by_car(car_id: str, request: Request, db: Session = Depends(get_db), user_id: Optional[str] = None):
+    """Get all prediction results for a specific car, sorted by timestamp (newest first)."""
+    if user_id:
+        target_user_id = user_id
+    else:
+        db_user = _get_current_user(request, db)
+        target_user_id = db_user.user_id
+
+    # Ensure the car belongs to the target user
+    vehicle = (
+        db.query(Vehicle)
+        .filter(Vehicle.car_id == car_id, Vehicle.user_id == target_user_id)
+        .first()
+    )
+    if vehicle is None:
+        raise HTTPException(status_code=404, detail=f"Vehicle '{car_id}' not found for user '{target_user_id}'")
 
     predictions = (
         db.query(PredictInfo)
@@ -158,7 +202,7 @@ def get_predictions_by_car(car_id: str, request: Request, db: Session = Depends(
     )
     return {
         "car_id": car_id,
-        "vehicle_name": vehicle.vehicle_name,
+        "car_name": vehicle.car_name,
         "total": len(predictions),
         "predictions": [
             {

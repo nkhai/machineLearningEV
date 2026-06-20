@@ -9,7 +9,8 @@ import pendulum
 from collections import defaultdict
 from sklearn.preprocessing import StandardScaler
 from hdfs import InsecureClient
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends, Request
+from core.auth import get_user, azure_scheme, AUTH_ENABLED, TEMPLATE_USER_ID
 
 from api.schemas import TrainRequest
 from core.config import HDFS_USER
@@ -25,7 +26,8 @@ from core.job_manager import submit_job, model_lock
 
 router = APIRouter()
 
-RAW_DATA_DIR = "/raw_data/battery_telemetry_v2"
+# Change base directory to the folder already processed by sampler
+SAMPLED_DATA_DIR = "/raw_sample_data/sampled_training"
 HDFS_MODEL_DIR = "/models/battery_health_ensemble"
 HDFS_IMAGE_DIR = "/models/learning_curve"
 
@@ -37,15 +39,21 @@ def _run_train_pipeline(job, hdfs_url: str):
 
     # ── STEP 1: LOAD & SPLIT DATA ──
     job.progress = "Step 1/3: Loading & splitting data..."
-    all_train_files = get_hdfs_files_filtered(client, RAW_DATA_DIR)
-
-    target_train_evs = ["EV_012", "EV_013", "EV_014"]
-    train_files = [f for f in all_train_files if any(ev in f for ev in target_train_evs)]
+    
+    # Scan all files in the Sampled directory instead of raw_data
+    all_sampled_files = get_hdfs_files_filtered(client, SAMPLED_DATA_DIR)
+    
+    # Only read CSV files, skip registry.json, .pkl, .npz files from sampler
+    train_files = [f for f in all_sampled_files if f.endswith(".csv")]
 
     if not train_files:
-        raise ValueError("No training files found for target EVs.")
+        raise ValueError(f"No training files found in {SAMPLED_DATA_DIR}. Please run the Sampler script first.")
 
     train_raw = load_data_universal(client, train_files, mode="train")
+    
+    # Auto-extract list of cars in training data for reporting
+    target_train_evs = list(set([meta["car_id"] for _, meta, _ in train_raw]))
+
     train_set, val_set = split_train_test_by_car(train_raw)
 
     train_chg = filter_by_modality(train_set, is_charge=True)
@@ -61,7 +69,7 @@ def _run_train_pipeline(job, hdfs_url: str):
     xgb_model_chg = None
     scaler_chg = None
     evals_result_chg = {}
-    X_val_chg_scaled = None
+    X_val_c
 
     if len(X_train_chg) > 0:
         scaler_chg = StandardScaler()
@@ -70,9 +78,10 @@ def _run_train_pipeline(job, hdfs_url: str):
         dtrain_chg = xgb.DMatrix(X_train_chg_scaled, label=y_train_chg)
         xgb_params = {
             "booster": "gbtree",
-            "learning_rate": 0.0001,
+            "learning_rate": 0.05,
             "objective": "reg:squarederror",
             "seed": 168,
+            "max_depth": 8,
             "nthread": -1,
             "device": device.type,
             "tree_method": "hist",
@@ -82,7 +91,7 @@ def _run_train_pipeline(job, hdfs_url: str):
         if len(X_val_chg) > 0:
             X_val_chg_scaled = scaler_chg.transform(X_val_chg)
             dval_chg = xgb.DMatrix(X_val_chg_scaled, label=y_val_chg)
-            evals.append((dval_chg, "val"))
+            evals.append((dval_chg, "val")) 
 
         xgb_model_chg = xgb.train(
             xgb_params, dtrain_chg, num_boost_round=300,
@@ -107,9 +116,10 @@ def _run_train_pipeline(job, hdfs_url: str):
         dtrain_drv = xgb.DMatrix(X_train_drv_scaled, label=y_train_drv)
         xgb_params_drv = {
             "booster": "gbtree",
-            "learning_rate": 0.0001,
+            "learning_rate": 0.05,
             "objective": "reg:squarederror",
             "seed": 168,
+            "max_depth": 8,
             "nthread": -1,
             "device": device.type,
             "tree_method": "hist",
@@ -136,13 +146,15 @@ def _run_train_pipeline(job, hdfs_url: str):
 
     if xgb_model_chg is not None and X_val_chg_scaled is not None:
         preds_chg = xgb_model_chg.predict(xgb.DMatrix(X_val_chg_scaled))
-        for p, (_, meta) in zip(preds_chg, val_chg):
+        # Fixed 3-tuple unpack error here (added _ variable)
+        for p, (_, meta, _) in zip(preds_chg, val_chg):
             val_preds_chg[meta["car_id"]].append(p)
             val_true_cap[meta["car_id"]] = meta.get("actual_max_capacity_Ah", -1)
 
     if xgb_model_drv is not None and X_val_drv_scaled is not None:
         preds_drv = xgb_model_drv.predict(xgb.DMatrix(X_val_drv_scaled))
-        for p, (_, meta) in zip(preds_drv, val_drv):
+        # Fixed 3-tuple unpack error here (added _ variable)
+        for p, (_, meta, _) in zip(preds_drv, val_drv):
             val_preds_drv[meta["car_id"]].append(p)
             val_true_cap[meta["car_id"]] = meta.get("actual_max_capacity_Ah", -1)
 
@@ -234,14 +246,21 @@ def _run_train_pipeline(job, hdfs_url: str):
     }
 
 
-@router.post("/train")
-def start_train(request: TrainRequest):
+auth_deps = [Depends(azure_scheme)] if AUTH_ENABLED else []
+
+# Attach auth_deps to endpoint
+@router.post("/train", dependencies=auth_deps)
+def start_train(
+    request: TrainRequest, 
+    fastapi_req: Request
+):
     """
     Submit a training job to run in background (non-blocking).
-
-    Returns immediately with a job_id to poll status.
     """
     hdfs_url = request.HDFS_URL
+
+    # Get user_id from token or use template user
+    user_id = get_user(fastapi_req).id if AUTH_ENABLED else request.user_id
 
     # Quick HDFS connectivity check before submitting
     try:
@@ -250,11 +269,19 @@ def start_train(request: TrainRequest):
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Cannot connect to HDFS at {hdfs_url}: {e}")
 
-    job = submit_job("train", hdfs_url, _run_train_pipeline, hdfs_url)
+    # TRUYỀN USER_ID XUỐNG DATABASE
+    job = submit_job(
+        "train", 
+        hdfs_url, 
+        _run_train_pipeline, 
+        hdfs_url,
+        user_id=user_id # <--- RECORD USER
+    )
 
     return {
         "status": "accepted",
         "message": "Training job submitted. Use /api/v1/jobs/{job_id} to check progress.",
         "job_id": job.job_id,
         "hdfs_url_used": hdfs_url,
+        "user_id": user_id
     }

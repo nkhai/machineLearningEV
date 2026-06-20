@@ -1,0 +1,196 @@
+SYSTEM ROLE:
+  You are an Advanced EV Battery Simulator specialized for urban driving in Vietnam.
+  Simulate battery behavior while the vehicle is running on Vietnamese city streets.
+
+SCENARIO & CONTEXT:
+  - Vehicle cruising in Vietnamese urban environment (Hanoi, Ho Chi Minh City, Da Nang, etc.)
+  - Speed fluctuates naturally between 0 km/h and 65 km/h
+  - Stop-and-go traffic with frequent motorcycle interactions
+  - Traffic lights, roundabouts, bus stops, school zones
+  - Heavy congestion during rush hours, lighter flow mid-day
+  - Road conditions vary (smooth asphalt, potholes, uneven surfaces)
+  - Monsoon rain periods, tropical heat affecting cooling
+  - Extreme motorcycle density: frequent lane changes, cut-ins
+  - Speed limits: 40-50 km/h in city center, 60 km/h in outer districts
+  - Traffic lights: frequent stops (average 3-5 per km in dense areas)
+  - Congestion: rush hours 7-9am, 5-7pm (very slow or stopped movement)
+  - Ambient temperature: 28-38°C (tropical, affects battery cooling)
+  - Humidity: 70-90% (heat dissipation less efficient)
+
+OUTPUT FORMAT (STRICT):
+  Return ONLY a valid JSON ARRAY containing exactly 3 sequential JSON objects.
+  NO explanation. NO extra text.
+  Format MUST be:
+  [
+    { "id": "...", "id_segment": "...", ... },
+    { "id": "...", "id_segment": "...", ... },
+    { "id": "...", "id_segment": "...", ... }
+  ]
+  Each of the 3 records MUST contain EXACTLY these 25 keys:
+    - id
+    - id_segment
+    - volt_V
+    - current_A
+    - soc_pct
+    - max_single_volt_V
+    - min_single_volt_V
+    - max_temp_C
+    - min_temp_C
+    - timestamp_s
+    - avg_speed_kmh
+    - hvac_active
+    - payload_kg
+    - regenerative_braking_Ah
+    - motor_rpm
+    - gear_position
+    - accelerator_pedal_pct
+    - brake_pedal_pct
+    - charger_connected
+    - label
+    - car_id
+    - car_model
+    - mileage_km
+    - actual_max_capacity_Ah
+    - nominal_capacity_Ah
+
+CAR MODEL SPECS (CRITICAL):
+  Based on the variable {car_model}, you MUST generate capacity fields appropriately:
+    - If {car_model} contains "SimuProB": nominal_capacity_Ah = 185.0
+    - If {car_model} contains "SimuProA": nominal_capacity_Ah = 210.0
+  actual_max_capacity_Ah MUST be slightly lower or equal to nominal_capacity_Ah.
+
+INITIALIZATION RULES (CRITICAL):
+  If context_records is empty (first timestep):
+    - soc_pct MUST BE EXACTLY {last_soc}
+
+TASK:
+  This is a STEP-BY-STEP simulation.
+  Generate EXACTLY 3 consecutive telemetry records (simulating t+10s, t+20s, and t+30s ahead).
+  Generate the array of 3 records based on:
+    - Previous Data
+    - All constraints and rules
+
+PHYSICS, BEHAVIOR & NON-LINEAR DYNAMICS:
+  1. NO LINEAR TRENDS: Do NOT constantly add a fixed delta to speed or current. Real Vietnamese traffic oscillates heavily (e.g., 35 -> 0 -> 15 -> 40 -> 20 -> 0 -> 50 -> 10 -> 35). Values MUST go UP and DOWN naturally, not monotonically.
+  2. SPEED LIMITS:
+     - Acceleration: Do not increase speed by more than 15 km/h in a 10-second step.
+     - Braking/Deceleration: Speed can drop up to 35 km/h in a single step (simulating sudden braking for motorbikes).
+  3. VOLTAGE SAG (PHYSICS): volt_V MUST drop when current_A spikes (internal resistance). When current_A decreases, volt_V MUST recover back to its resting level.
+  4. CRAWLING OVER STOPPING (CRITICAL): Traffic in Vietnam rarely stops completely for long periods. Prioritize slow crawling (5-15 km/h) over full stops.
+     - If avg_speed_kmh hits 0, it MUST NOT stay at 0 for more than 2 consecutive steps (20 seconds max).
+     - If the last 2 records in context_records have avg_speed_kmh == 0, you MUST force the car to move (avg_speed_kmh >= 5.0) in this next step. Do NOT spam 0 km/h.
+  5. MOTORBIKE INTERACTIONS: Sudden slowing (5-10 km/h drops) for motorbikes cutting in.
+
+FIELD RULES & CONSTRAINTS:
+  avg_speed_kmh:
+    - Range: [0.0, 65.0]
+    - Heavy congestion (rush hour): 0-20 km/h, frequent stops
+    - Normal urban: 20-40 km/h, occasional acceleration to 50-60
+    - Light traffic (mid-day, outer districts): 30-55 km/h
+    - School zones / hospital areas: 10-25 km/h
+    - Oscillate naturally with frequent stops at lights/junctions
+    - CRITICAL ZERO-SPEED LOGIC: If avg_speed_kmh == 0:
+        * motor_rpm MUST strictly be 0.
+        * accelerator_pedal_pct MUST strictly be 0.
+        * brake_pedal_pct MUST be > 0 (driver holding brake at traffic light/jam).
+        * current_A MUST be strictly in idle range [1.0, 15.0] (HVAC and electronics only).
+
+  current_A:
+    - Acceleration: [20, 200] A (city driving peak)
+    - Cruising (20-40 km/h): [10, 80] A
+    - Light traffic (40-60 km/h): [15, 100] A
+    - Idle at stoplight: [1.0, 8.0] A (HVAC, electronics)
+    - Regenerative braking: [-5, -40] A (brief, during deceleration and appear MAXIMUM in 3 records)
+    - MUST fluctuate logically with speed and pedal position.
+    - Idle at stoplight/traffic jam (0 km/h):
+        * If hvac_active=1 and max_temp_C > 35: [8.0, 15.0] A (AC compressor running hard).
+        * Otherwise: [1.0, 8.0] A.
+
+  volt_V:
+    - Total Pack Voltage (400V Architecture)
+    - Base voltage depends on SOC:
+      * 100% SOC: ~420V (fully charged resting)
+      * 75% SOC: ~400V
+      * 50% SOC: ~375V
+      * 25% SOC: ~350V
+      * 10% SOC: ~335V
+    - Fluctuate inversely with current_A (Voltage Sag): drop 1.0V - 5.0V during acceleration.
+    - Recovery takes 2-4 steps after acceleration ends.
+    - Hot weather (35°C+) causes slightly lower resting voltage.
+
+  soc_pct:
+    - [5, 100]
+    - MUST decrease over time. NEVER increase.
+    - DEGRADATION EFFECT (CRITICAL): The drop rate MUST be inversely proportional to battery health. You MUST multiply the base drop by the degradation factor: (nominal_capacity_Ah / actual_max_capacity_Ah). A degraded battery (lower actual capacity) loses percentage FASTER!
+    - Base drop per step (Multiply this by the factor above):
+      * Normal cruising: 0.005% - 0.015%
+      * Heavy traffic (stop-and-go): 0.008% - 0.025%
+      * High speed: 0.015% - 0.035%
+      * Idle (0 km/h): 0.001% - 0.005% (HVAC only)
+
+  TEMPERATURE (max_temp_C / min_temp_C):
+    - Tropical ambient: base temperature starts 30-35C
+    - 28 <= min_temp_C <= max_temp_C <= 48 (higher limit due to heat)
+    - Slow increase: 0.02-0.15C per step during driving
+    - During idle (traffic jam): temp may rise (less airflow)
+    - During high speed: cooling more effective, slower rise
+    - Delta temp between max/min cells: 1-4C normal, up to 6C under stress
+    - MUST NOT jump by more than 0.3C per step.
+
+  max_single_volt_V / min_single_volt_V:
+    - max_single_volt_V: [3.40, 4.15]. Under stress: may reach 4.15V briefly.
+    - min_single_volt_V: [3.38, 4.12]. During heavy load: may dip lower.
+    - max_single_volt_V >= min_single_volt_V
+    - (max - min) < 0.02 normal; <= 0.05 during hard acceleration/braking; <= 0.08 if label="10"
+
+  mileage_km:
+    - If context_records is empty: Initialize randomly between [0.0, 200000.0].
+    - Otherwise: mileage_km(t+1) = mileage_km(t) + (avg_speed_kmh / 3600) * 10
+    - Keep precision to 2 decimal places.
+
+  motor_rpm:
+    - [0, 6000] (Urban speeds). Strictly proportional to avg_speed_kmh.
+    - 0 RPM when stopped. At 40 km/h ~ 2500-3500 RPM. At 60 km/h ~ 4000-5000 RPM.
+
+  accelerator_pedal_pct:
+    - Range: [0.0, 80.0] (Highly correlated with current_A and speed changes)
+    - In stop-and-go: spikes to 40-80 during acceleration, drops to 0 at stops. During cruising: steady 20-50.
+
+  brake_pedal_pct:
+    - Range: [0, 100]
+    - Light braking: 5-30 (traffic light red, slowing). Hard braking: 50-100 (emergency for motorbike cut-in).
+    - Typical: 0 in cruising, intermittent spikes.
+
+  Other Flags:
+    - hvac_active: 0 or 1 (More likely 1 in Vietnam).
+    - charger_connected = 0
+    - gear_position = "D" (occasionally "N" in traffic jams)
+    - regenerative_braking_Ah: small positive values during braking (0-0.03 per step)
+
+ID & SEGMENTATION RULES (STRICT):
+  - id: Must be in format DRxxxxxx (e.g., DR205432). CONSTANT throughout the driving session.
+  - id_segment: Must be in format {id}_{segment_number} (e.g., DR205432_5).
+  - timestamp_s: 
+      * If context_records is empty: Start at 0.
+      * If previous timestamp_s < 1270: Current timestamp_s = previous + 10.
+      * If previous timestamp_s >= 1270: Current timestamp_s resets to 0, segment_number MUST increment by 1.
+  - Each segment has a maximum duration of 1270 seconds.
+
+RELATIONSHIP RULES:
+  - CAPACITY LOGIC: If actual_max_capacity_Ah < nominal_capacity_Ah, the soc_pct MUST drop noticeably faster than a brand new battery under the same current_A.
+  - HARD BRAKING LOGIC: If speed drops by > 10 km/h in one step (motorbike cut-in):
+      * brake_pedal_pct MUST spike (>40).
+      * current_A MUST be NEGATIVE (e.g., -15 to -40 A).
+      * regenerative_braking_Ah MUST be > 0.
+      * volt_V MUST slightly increase (charging effect).
+  - accelerator increases -> current increases (positive, draws from battery)
+  - speed increases -> rpm increases proportionally
+  - hvac=1 -> slight additional current drain during idle
+
+CONTEXT:
+  Previous Data: {context_records}
+  Current Car Model: {car_model}
+  Current Car ID: {car_id}
+
+FINAL OUTPUT:
+  Output a valid JSON ARRAY of 3 objects only.

@@ -7,7 +7,7 @@ def split_train_test_by_car(dataset, train_ratio=0.8, seed=168):
     car_map = defaultdict(list)
 
     for sample in dataset:
-        _, meta = sample
+        _, meta, _ = sample
         car_id = meta["car_id"]
         car_map[car_id].append(sample)
 
@@ -35,7 +35,8 @@ def extract_features_3d(dataset):
     X = np.zeros((len(dataset), window_size, num_features), dtype=np.float32)
     y = np.zeros(len(dataset), dtype=np.float32)
 
-    for i, (x, meta) in enumerate(dataset):
+    # Fixed: Added _ variable to hold the 3rd value
+    for i, (x, meta, _) in enumerate(dataset):
         X[i] = x
         y[i] = meta["actual_max_capacity_Ah"]
     return X, y
@@ -51,7 +52,8 @@ def extract_features_2d(dataset):
     X = np.zeros((len(dataset), flattened_dim), dtype=np.float32)
     y = np.zeros(len(dataset), dtype=np.float32)
 
-    for i, (x, meta) in enumerate(dataset):
+    # Fixed: Added _ variable to hold the 3rd value
+    for i, (x, meta, _) in enumerate(dataset):
         X[i] = x.flatten()
         y[i] = meta["actual_max_capacity_Ah"]
     return X, y

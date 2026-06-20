@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Float
+from sqlalchemy import Column, String
 from .connection import Base
 
 class Vehicle(Base):
@@ -6,7 +6,8 @@ class Vehicle(Base):
 
     car_id = Column(String, primary_key=True, index=True)
     car_name = Column(String)
-    vin = Column(String, unique=True)
+    vin_number = Column(String, unique=True)
     license_plate = Column(String, unique=True)
-    battery = Column(String)
-    motor = Column(String)
+    battery_serial = Column(String)
+    motor_serial = Column(String)
+    user_id = Column(String)

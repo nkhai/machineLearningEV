@@ -1,19 +1,19 @@
-FROM nvidia/cuda:12.6.3-runtime-ubuntu22.04
+FROM ubuntu:22.04
 
 WORKDIR /app
 
-# Install Python
+# Cài đặt Python và các công cụ cơ bản
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 python3-pip \
     && ln -sf /usr/bin/python3 /usr/bin/python \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
+# Cài đặt PyTorch bản CPU và các dependencies khác
 COPY requirements.txt .
-RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cu121 \
+RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu \
     && pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Copy mã nguồn ứng dụng
 COPY main.py .
 COPY api/ api/
 COPY core/ core/

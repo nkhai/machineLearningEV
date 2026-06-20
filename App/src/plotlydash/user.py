@@ -238,7 +238,7 @@ app.layout = html.Div(style={
                     html.Span(f" {args.car_id}", style={'color':'#aaa','fontWeight':'bold'})
                 ], style={'fontSize':'20px'}),
                 
-                # Car ID
+                # Car Name
                 html.Div([
                     html.Span("Car Name:", style={'color':'#666'}), 
                     html.Span(f" {args.car_name}", style={'color':'#aaa'})
@@ -269,8 +269,7 @@ app.layout = html.Div(style={
                 html.Div(style={'width':'180px'}, children=[
                     info_box("Max Temp", "0", "°C", value_id="max-temp-val"),
                     info_box("Min Temp", "0", "°C", value_id="min-temp-val"),
-                    html.Div([html.Div("Mileage: 0 km", id='mileage-val', style={'color':colors['text'],'fontSize':'13px','fontWeight':'bold'})],
-                             style={'backgroundColor':'#141618','borderRadius':'12px','padding':'15px','marginTop':'15px','border':'1px solid #222','textAlign':'center'})
+                    info_box("Mileage", "0", "km", value_id="mileage-val") 
                 ])
             ]),
             html.Div(style={'marginTop':'auto'}, children=[
@@ -288,7 +287,7 @@ app.layout = html.Div(style={
         ])
     ]),
     
-    dcc.Interval(id='interval-ev', interval=5000, n_intervals=0)
+    dcc.Interval(id='interval-ev', interval=2000, n_intervals=0) # Update interval increased to 2 seconds
 ])
 
 # ======================
@@ -358,26 +357,35 @@ def update_ev_data(n):
     try:
         r = requests.get(BACKEND_URL, timeout=0.3)
         data = r.json()
-    
     except Exception as e:
-        print(f"Error fetching data: {e}")
         data = {}
 
+    # ---------------------------------------------------------
+    # MAPPED ACCORDING TO KAFKA_SCHEMA_FIELDS
+    # ---------------------------------------------------------
     try:
         label = int(data.get("label", 0)) 
     except:
         label = 0
 
-    volt = round(float(data.get("volt", 0)), 2)
-    current = round(float(data.get("current", 0)), 2)
-    capacity = round(float(data.get("capacity", 0)), 2)
-    soc = round(float(data.get("soc", 0)), 2)
-    max_temp = round(float(data.get("max_temp", 0)), 1)
-    min_temp = round(float(data.get("min_temp", 0)), 1)
-    mileage = round(float(data.get("mileage", 0)), 2)
-    timestamp = data.get("timestamp", 0)
+    # Fetch data based on actual schema field names
+    volt = round(float(data.get("volt_V", 0)), 2)
+    current = round(float(data.get("current_A", 0)), 2)
     
-    speed = 0 
+    # For capacity, use actual_max_capacity_Ah or nominal_capacity_Ah depending on business logic
+    capacity = round(float(data.get("nominal_capacity_Ah", 0)), 2) 
+    
+    soc = round(float(data.get("soc_pct", 0)), 2)
+    max_temp = round(float(data.get("max_temp_C", 0)), 1)
+    min_temp = round(float(data.get("min_temp_C", 0)), 1)
+    mileage = round(float(data.get("mileage_km", 0)), 2)
+    timestamp = data.get("timestamp_s", 0)
+    
+    # Map speed to avg_speed_kmh
+    try:
+        speed = round(float(data.get("avg_speed_kmh", 0)), 1)
+    except:
+        speed = 0
 
     current_time = pd.Timestamp.now()
     new_row = pd.DataFrame({'x': [current_time], 'y': [volt]})
@@ -418,12 +426,12 @@ def update_ev_data(n):
         status_content = html.Span("NORMAL", style={'fontWeight': 'bold', 'color': colors['green'], 'fontSize': '16px', 'letterSpacing': '1px'})
 
     return (
-        f"{speed}",
+        f"{int(speed)}", 
         create_speedometer(speed),
         f"{soc}%",
         fig_trend,
         f"Timestamp: {timestamp}",
-        f"Mileage: {mileage} km",
+        f"{mileage:,.2f}", # Return raw number, info_box layout handles unit concatenation
         f"{volt}",
         f"{current}",
         f"{capacity}",

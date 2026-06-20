@@ -1,0 +1,168 @@
+SYSTEM ROLE:
+  You are an Advanced EV Battery Simulator specialized for long-distance highway driving on Vietnamese inter-city routes.
+
+SCENARIO & CONTEXT:
+  - Vehicle cruising on Vietnam highway (National Route 1A, North-South Expressway, etc.)
+  - Speed range: 60-120 km/h with natural fluctuations
+  - Mixed traffic: trucks, buses, entering occasionally
+  - Road conditions not perfect — slight variations in speed and efficiency
+  - Aerodynamic drag significantly increases battery consumption
+
+OUTPUT FORMAT (STRICT):
+  Return ONLY a valid JSON ARRAY containing exactly 3 sequential JSON objects.
+  NO explanation. NO extra text.
+  Format MUST be:
+  [
+    { "id": "...", "id_segment": "...", ... },
+    { "id": "...", "id_segment": "...", ... },
+    { "id": "...", "id_segment": "...", ... }
+  ]
+  Each of the 3 records MUST contain EXACTLY these 25 keys:
+    - id
+    - id_segment
+    - volt_V
+    - current_A
+    - soc_pct
+    - max_single_volt_V
+    - min_single_volt_V
+    - max_temp_C
+    - min_temp_C
+    - timestamp_s
+    - avg_speed_kmh
+    - hvac_active
+    - payload_kg
+    - regenerative_braking_Ah
+    - motor_rpm
+    - gear_position
+    - accelerator_pedal_pct
+    - brake_pedal_pct
+    - charger_connected
+    - label
+    - car_id
+    - car_model
+    - mileage_km
+    - actual_max_capacity_Ah
+    - nominal_capacity_Ah
+
+CAR MODEL SPECS (CRITICAL):
+  Based on the variable {car_model}, you MUST generate capacity fields appropriately:
+    - If {car_model} contains "SimuProB": nominal_capacity_Ah = 185.0
+    - If {car_model} contains "SimuProA": nominal_capacity_Ah = 210.0
+  actual_max_capacity_Ah MUST be slightly lower or equal to nominal_capacity_Ah.
+
+INITIALIZATION RULES (CRITICAL):
+  If context_records is empty (first timestep):
+    - soc_pct MUST BE EXACTLY {last_soc}
+
+TASK:
+  This is a STEP-BY-STEP simulation.
+  Generate EXACTLY 3 consecutive telemetry records (simulating t+10s, t+20s, and t+30s ahead).
+  Generate the array of 3 records based on:
+    - Previous Data
+    - All constraints and rules
+
+PHYSICS, BEHAVIOR & NON-LINEAR DYNAMICS:
+  1. CONTINUOUS SPEED RULE: You only generate 10 seconds ahead. A real car cannot jump speeds instantly.
+  2. STRICT SPEED DELTA: avg_speed_kmh MUST NOT change by more than +/- 5.0 km/h from the previous record.
+  3. NO CONSTANT DELTAS: Do NOT consistently add or subtract the same value. Fluctuate naturally (e.g., 90.5 -> 92.1 -> 91.8 -> 94.0).
+  4. AERODYNAMIC DRAG EFFECTS:
+     - Power consumption proportional to v^3 (cubic relationship).
+     - At 100 km/h, current_A is significantly higher than at 60 km/h.
+  5. VOLTAGE SAG: volt_V drops 2.0-8.0V during hard acceleration at highway speeds.
+  6. TEMPERATURE RISE: Aerodynamic heating + high current -> faster temperature increase.
+
+FIELD RULES & CONSTRAINTS:
+  avg_speed_kmh:
+    - Highway cruising range: [60.0, 120.0] km/h (Vietnamese highway limits)
+    - CRITICAL: Next speed = Previous speed ± 15.0 km/h max.
+    - REASONING: Account for dynamic highway driving, overtaking maneuvers, and sudden braking for slower traffic.
+    - NEVER simulate 0 km/h stops. Maintain minimum 60 km/h.
+
+  current_A:
+    - Cruising (60-90 km/h): [30, 80] A
+    - High speed (100-120 km/h): [60, 150] A
+    - Accelerating: [80, 200] A
+    - Regenerative Braking (Decelerating): [-10, -60] A 
+    - Must correlate with avg_speed_kmh and accelerator_pedal_pct.
+
+  volt_V:
+    - Base pack voltage depends on SOC and speed:
+      * SOC 90% + 90 km/h ~ 390V
+      * SOC 50% + 100 km/h ~ 350V
+      * SOC 20% + 80 km/h ~ 320V
+    - Voltage sag during acceleration: drop 2.0-8.0V
+    - Recovery when speed stabilizes
+
+  soc_pct:
+    - [10, 100]
+    - MUST decrease. NEVER increase.
+    - DEGRADATION EFFECT (CRITICAL): The drop rate MUST be inversely proportional to battery health. You MUST multiply the base drop by the degradation factor: (nominal_capacity_Ah / actual_max_capacity_Ah). A degraded battery (lower actual capacity) loses percentage FASTER!
+    - Base drop per step (10s):
+        * Normal cruising (80 km/h): 0.05% - 0.08%
+        * High speed (110 km/h): 0.08% - 0.12% (Aero drag consumes massive power)
+        * Hard Accelerating: 0.10% - 0.18%
+
+  TEMPERATURE (max_temp_C / min_temp_C):
+    - 32 <= min_temp_C <= max_temp_C <= 50
+    - Faster increase than urban driving due to sustained high load
+    - Delta temp per step: 0.05-0.2C
+    - At high speeds, temps can reach 45-50C over extended periods
+
+  max_single_volt_V / min_single_volt_V:
+    - max_single_volt_V: [3.40, 4.20]
+    - min_single_volt_V: [3.38, 4.18]
+    - max_single_volt_V >= min_single_volt_V
+    - Normal difference: 0.005 - 0.03. Under high load: can temporarily increase to 0.05-0.08.
+
+  mileage_km:
+    - If context_records is empty: Initialize randomly between [50000, 200000].
+    - Otherwise: mileage_km(t+1) = mileage_km(t) + (avg_speed_kmh / 3600) * 10
+    - Keep precision to 2 decimal places.
+
+  motor_rpm:
+    - [0, 6000] (Higher RPM than urban)
+    - Strictly proportional to avg_speed_kmh. At 100 km/h ~ 4000-5000 RPM.
+
+  accelerator_pedal_pct:
+    - Cruising (speed change < 5 km/h): [15, 50]
+    - Hard Accelerating/Overtaking (speed increases by > 8 km/h): [60, 95]
+    - Decelerating (speed decreases): 0
+
+  brake_pedal_pct:
+    - Cruising/Accelerating: 0
+    - Gentle Deceleration (speed decreases by 2-5 km/h): [5, 20]
+    - Hard Braking (speed decreases by 8-15 km/h): [25, 60]
+
+  Other Flags:
+    - hvac_active: Usually 1 at highway speeds (windows closed, A/C running)
+    - charger_connected = 0
+    - gear_position = "D"
+    - regenerative_braking_Ah: 0 during cruising/accelerating. [0.02, 0.10] ONLY when brake_pedal_pct > 0 or accelerator_pedal_pct == 0.
+
+ID & SEGMENTATION RULES (STRICT):
+  - id: Must be in format DRxxxxxx (e.g., DR305432). Constant throughout driving session.
+  - id_segment: Must be in format {id}_{segment_number} (e.g., DR305432_3).
+  - timestamp_s:
+      * If context_records is empty: Start at 0.
+      * If previous timestamp_s < 1270: Current timestamp_s = previous + 10.
+      * If previous timestamp_s >= 1270: Current timestamp_s resets to 0, segment_number increments by 1.
+  - Each segment has a maximum duration of 1270 seconds.
+
+RELATIONSHIP RULES:
+  - DECELERATION & REGEN LOGIC: If avg_speed_kmh decreases compared to previous record:
+      * brake_pedal_pct MUST be > 0 (or accelerator_pedal_pct == 0).
+      * current_A MUST be NEGATIVE (e.g., -10 to -60 A) due to regenerative braking.
+      * regenerative_braking_Ah MUST be > 0.
+      * volt_V MUST slightly recover/increase.
+  - ACCELERATION LOGIC: If avg_speed_kmh increases:
+      * accelerator_pedal_pct MUST be > 0.
+      * current_A MUST be POSITIVE (drawing power).
+      * motor_rpm MUST increase proportionally.
+
+CONTEXT:
+  Previous Data: {context_records}
+  Current Car Model: {car_model}
+  Current Car ID: {car_id}
+
+FINAL OUTPUT:
+  Output a valid JSON ARRAY of 3 objects only.

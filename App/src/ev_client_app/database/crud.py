@@ -9,18 +9,20 @@ def create_vehicle(
     db: Session,
     car_id: str,
     car_name: str,
-    vin: str,
+    vin_number: str,
     license_plate: str,
-    battery: str,
-    motor: str
+    battery_serial: str,
+    motor_serial: str,
+    user_id: str = ""
 ):
     vehicle = models.Vehicle(
         car_id=car_id,
         car_name=car_name,
-        vin=vin,
+        vin_number=vin_number,
         license_plate=license_plate,
-        battery=battery,
-        motor=motor
+        battery_serial=battery_serial,
+        motor_serial=motor_serial,
+        user_id=user_id
     )
     db.add(vehicle)
     db.commit()
@@ -32,16 +34,17 @@ def create_vehicle(
 
     return vehicle
 
-def update_vehicle(db: Session, car_id: str, car_name: str, vin: str, license_plate: str, battery: str, motor: str):
+def update_vehicle(db: Session, car_id: str, car_name: str, vin_number: str, license_plate: str, battery_serial: str, motor_serial: str, user_id: str = ""):
     vehicle = db.query(models.Vehicle).filter(models.Vehicle.car_id == car_id).first()
     if not vehicle:
         return None
 
     vehicle.car_name = car_name
-    vehicle.vin = vin
+    vehicle.vin_number = vin_number
     vehicle.license_plate = license_plate
-    vehicle.battery = battery
-    vehicle.motor = motor
+    vehicle.battery_serial = battery_serial
+    vehicle.motor_serial = motor_serial
+    vehicle.user_id = user_id
 
     db.commit()
     db.refresh(vehicle)

@@ -180,6 +180,15 @@ eet_dp_ai_predictive/
 │       ├── README_VI.md            # Vietnamese docs
 │       └── DEPLOYMENT_SUMMARY.md   # Deployment summary
 └── src/                            # Source code
+    ├── ev_client_app/              # EV telemetry generation (LLM-based)
+    │   ├── charging/               # AC/DC charging simulation
+    │   ├── driving/                # Urban cruise simulation
+    │   └── EV101/                  # Modular agent architecture
+    │       ├── core/               # Models, state, constants
+    │       ├── agent/              # EVAgent + tools (driving/charging)
+    │       ├── prompts/            # YAML prompt templates
+    │       ├── services/           # Kafka producer/consumer
+    │       └── admin/              # Admin dashboard API
     └── airflow/dags/               # Airflow DAGs
 ```
 
@@ -358,34 +367,24 @@ Services within the Docker network communicate with each other using their conta
 
 | Service           | Connects To         | Address (within Docker network)      |
 | ----------------- | ------------------- | ------------------------------------ |
-| **Kafka Brokers** | Zookeeper           | `zookeeper:2181`                     |
 | **Hadoop Datanodes**| Namenode            | `namenode:8020`                      |
 | **YARN Nodemanagers**| ResourceManager     | `resourcemanager:8032`                 |
-| **Spark Workers** | Spark Master        | `spark://spark-master:7077`          |
-| **Spark Apps**    | HDFS                | `hdfs://namenode:8020`               |
 | **Airflow**       | PostgreSQL          | `postgres:5432`                      |
 | **Airflow**       | Redis               | `redis:6379`                         |
-| **All Services**  | Kafka Brokers       | `kafka-broker-1:9092`, `kafka-broker-2:9093`, etc. |
+| **All Services**  | Kafka Broker        | `kafka:9092` |
 
 ### External Port Mappings
 
-The following ports are exposed to the host machine. If deploying on a cloud server, ensure your firewall or security group rules allow traffic on these external ports.
+All infrastructure services use **host networking** and are accessible on `localhost`. PostgreSQL and pgAdmin use a bridge network with custom ports.
 
-| Service                 | Internal Port | External Port (Host) | Purpose                               | URL for Access (if applicable)        |
-| ----------------------- | ------------- | -------------------- | ------------------------------------- | ------------------------------------- |
-| **Zookeeper**           | `2181`        | `46000`              | Client Connections                    | `localhost:46000`                     |
-| **Kafka Broker 1**      | `19092`       | `46001`              | External Client Access                | `localhost:46001`                     |
-| **Kafka Broker 2**      | `19093`       | `46002`              | External Client Access                | `localhost:46002`                     |
-| **Kafka Broker 3**      | `19094`       | `46003`              | External Client Access                | `localhost:46003`                     |
-| **HDFS Namenode**       | `9870`        | `46004`              | Web UI                                | `http://localhost:46004`              |
-| **HDFS Datanode 1**     | `9864`        | `46005`              | Web UI                                | `http://localhost:46005`              |
-| **HDFS Datanode 2**     | `9864`        | `46006`              | Web UI                                | `http://localhost:46006`              |
-| **YARN ResourceManager**| `8088`        | `46007`              | Web UI                                | `http://localhost:46007`              |
-| **YARN Nodemanager 1**  | `8042`        | `46008`              | Web UI                                | `http://localhost:46008`              |
-| **YARN Nodemanager 2**  | `8042`        | `46009`              | Web UI                                | `http://localhost:46009`              |
-| **Spark Master**        | `8080`        | `46010`              | Web UI                                | `http://localhost:46010`              |
-| **Spark Worker 1**      | `8081`        | `46011`              | Web UI                                | `http://localhost:46011`              |
-| **Spark Worker 2**      | `8081`        | `46012`              | Web UI                                | `http://localhost:46012`              |
-| **PostgreSQL**          | `5432`        | `46013`              | Database Client Access                | `localhost:46013`                     |
-| **Redis**               | `6379`        | `46014`              | Redis Client Access                   | `localhost:46014`                     |
-| **Airflow Webserver**   | `8080`        | `46015`              | Web UI                                | `http://localhost:46015`              |
+| Service                 | Port | Purpose                              | URL / Connection String                     |
+| ----------------------- | ---- | ------------------------------------ | ------------------------------------------- |
+| **Kafka Broker**        | `9092` | Client connections (KRaft mode)     | `localhost:9092`                            |
+| **HDFS NameNode RPC**   | `8020` | RPC interface                        | `namenode:8020` (internal)                  |
+| **HDFS NameNode UI**    | `9870` | Web UI                               | `http://localhost:9870`                     |
+| **YARN ResourceManager**| `8088` | Web UI                               | `http://localhost:8088`                     |
+| **Airflow Webserver**   | `8080` | Web UI (login: airflow/airflow)     | `http://localhost:8080`                     |
+| **Flower (Celery)**     | `5555` | Celery monitoring                    | `http://localhost:5555`                     |
+| **PostgreSQL**          | `45432` | Airflow metastore                  | `localhost:45432`                           |
+| **Redis**               | `6379` | Celery message broker                | `localhost:6379`                            |
+| **pgAdmin**             | `46016` | DB admin UI                         | `http://localhost:46016` (pgadmin@bosch.com/admin) |

@@ -3,16 +3,17 @@ import pandas as pd
 from ml_airflow.config.config import WINDOW_SIZE, FEATURE_COLS_CHG, FEATURE_COLS_DRV
 
 class GlobalSnippetBuffer:
-    def __init__(self, mode='train'):
+    def __init__(self, mode='train', pad_short_windows=False):
         self.rows = {} 
         self.metas = {}
-        self.mode = mode 
+        self.mode = mode
+        self.pad_short_windows = pad_short_windows
 
     def add_chunk(self, df_chunk, file_path=""):
         finished_samples = []
         df_chunk = df_chunk.copy()
 
-        # 1. TIỀN XỬ LÝ
+        # 1. PREPROCESSING
         if "id_segment" not in df_chunk.columns:
             return []
 
@@ -24,7 +25,7 @@ class GlobalSnippetBuffer:
         else:
             return []
 
-        # Xử lý Capacity (Sử dụng actual_max_capacity_Ah)
+        # Process Capacity (use actual_max_capacity_Ah)
         if "actual_max_capacity_Ah" not in df_chunk.columns:
             if self.mode == 'train':
                 return [] 
@@ -41,7 +42,7 @@ class GlobalSnippetBuffer:
         if df_chunk.empty:
             return []
 
-        # 2. NHÓM DỮ LIỆU
+        # 2. GROUP DATA
         for key, group in df_chunk.groupby(["car_id", "id_segment"]):
             if key not in self.metas:
                 first_row = group.iloc[0]
@@ -52,7 +53,9 @@ class GlobalSnippetBuffer:
                     "actual_max_capacity_Ah": float(first_row["actual_max_capacity_Ah"]),
                     "mileage_km": float(first_row.get("mileage_km", 0.0)),
                     "charger_connected": int(first_row.get("charger_connected", 1)),
-                    "file_paths": {file_path} if file_path else set() 
+                    "car_model": str(first_row.get("car_model", "")),
+                    "nominal_capacity_Ah": float(first_row.get("nominal_capacity_Ah", 0.0)),
+                    "file_paths": {file_path} if file_path else set()
                 }
             else:
                 if file_path:
@@ -66,7 +69,7 @@ class GlobalSnippetBuffer:
             total_rows = len(combined_df)
             num_windows = total_rows // WINDOW_SIZE
             
-            # ---> XÁC ĐỊNH FEATURE_COLS DỰA VÀO TRẠNG THÁI SẠC <---
+            # ---> DETERMINE FEATURE_COLS BASED ON CHARGING STATE <---
             is_charging = self.metas[key]["charger_connected"] == 1
             current_feature_cols = FEATURE_COLS_CHG if is_charging else FEATURE_COLS_DRV
             
@@ -80,8 +83,8 @@ class GlobalSnippetBuffer:
                 unique_steps = window_df["step_idx"].nunique()
 
                 if (max_step - min_step == 127) and (unique_steps == 128):
-                    # Trích xuất dữ liệu dựa trên danh sách cột đã chọn
-                    # Cần đảm bảo các cột tồn tại trong DataFrame, nếu thiếu điền 0
+                    # Extract data based on selected column list
+                    # Ensure columns exist in DataFrame, fill missing with 0
                     for col in current_feature_cols:
                         if col not in window_df.columns:
                             window_df[col] = 0.0
@@ -89,10 +92,34 @@ class GlobalSnippetBuffer:
                     values = window_df.sort_values("step_idx")[current_feature_cols].fillna(0).values.astype(np.float32)
                     meta_copy = self.metas[key].copy()
                     meta_copy["file_paths"] = set(self.metas[key]["file_paths"]) 
-                    finished_samples.append((values, meta_copy))
+                    finished_samples.append((values, meta_copy, file_path))
                         
             remainder = total_rows % WINDOW_SIZE
             if remainder > 0:
+                if self.pad_short_windows:
+                    remainder_df = combined_df.iloc[-remainder:].copy()
+                    # Pad to WINDOW_SIZE
+                    pad_rows = WINDOW_SIZE - remainder
+                    if not remainder_df.empty:
+                        pad_df = remainder_df.iloc[[-1]].copy()
+                        pad_df.index = range(pad_rows)
+                        remainder_df = pd.concat([remainder_df, pad_df], ignore_index=True)
+                    else:
+                        remainder_df = pd.DataFrame()
+                    
+                    for col in (FEATURE_COLS_CHG if is_charging else FEATURE_COLS_DRV):
+                        if col not in remainder_df.columns:
+                            remainder_df[col] = 0.0
+                    
+                    if len(remainder_df) == WINDOW_SIZE:
+                        for col in (FEATURE_COLS_CHG if is_charging else FEATURE_COLS_DRV):
+                            if col not in remainder_df.columns:
+                                remainder_df[col] = 0.0
+                        padded_values = remainder_df.sort_values("step_idx")[FEATURE_COLS_CHG if is_charging else FEATURE_COLS_DRV].fillna(0).values.astype(np.float32)
+                        meta_copy = self.metas[key].copy()
+                        meta_copy["file_paths"] = set(self.metas[key]["file_paths"])
+                        finished_samples.append((padded_values, meta_copy, file_path))
+                
                 self.rows[key] = combined_df.iloc[-remainder:]
             else:
                 if key in self.rows:

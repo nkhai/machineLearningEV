@@ -6,16 +6,39 @@ dash-daq==0.5.0
 # Visualization & Data
 plotly==5.22.0
 
-# Server 
+# Server
 gunicorn==22.0.0
 
-# Fastapi
+# FastAPI
 fastapi==0.110.0
+uvicorn==0.44.0
 
-requests>=2.31.0
+# HTTP
+requests==2.33.1
 
 # PostgreSQL driver
 psycopg2-binary==2.9.9
 
-# ORM 
+# ORM
 SQLAlchemy==2.0.21
+
+# Validation
+pydantic==2.13.2
+
+# Env vars
+python-dotenv==1.2.2
+
+# Kafka
+kafka-python>=2.0.2
+
+# LangChain + OpenAI
+langchain==1.2.15
+langchain-core==2.3.0
+langchain-openai=1.1.14
+openai==2.32.0
+
+# YAML prompts
+pyyaml==6.0.3
+
+# HDFS
+hdfs==2.7.3

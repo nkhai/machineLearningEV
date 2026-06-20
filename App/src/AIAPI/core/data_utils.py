@@ -1,6 +1,7 @@
 import os
 import csv
 import io
+import time
 import tempfile
 import pandas as pd
 import pendulum
@@ -13,8 +14,8 @@ from core.config import HDFS_URL, HDFS_USER, HDFS_OUTPUT_DIR
 from core.snippetbuffer import GlobalSnippetBuffer
 
 
-def load_data_universal(client, file_paths, mode='train'):
-    global_buffer = GlobalSnippetBuffer(mode=mode)
+def load_data_universal(client, file_paths, mode='train', max_dl_retries=3, pad_short_windows=False):
+    global_buffer = GlobalSnippetBuffer(mode=mode, pad_short_windows=pad_short_windows)
     all_collected_samples = []
 
     file_paths = sorted(file_paths)
@@ -25,8 +26,22 @@ def load_data_universal(client, file_paths, mode='train'):
             file_name = os.path.basename(hdfs_path)
             local_path = os.path.join(tmp_dir, f"{mode}_{file_name}")
 
+            dl_success = False
+            for attempt in range(1, max_dl_retries + 1):
+                try:
+                    client.download(hdfs_path, local_path, overwrite=True)
+                    dl_success = True
+                    break
+                except Exception as e:
+                    err_type = type(e).__name__
+                    print(f"  -> [Warning] Download {file_name} failed (attempt {attempt}/{max_dl_retries}): {err_type}")
+                    time.sleep(3)
+
+            if not dl_success:
+                print(f"  -> [Error] Skipping {file_name} after {max_dl_retries} download attempts.")
+                continue
+
             try:
-                client.download(hdfs_path, local_path, overwrite=True)
                 chunk_iter = pd.read_csv(local_path, chunksize=200_000)
 
                 for chunk in chunk_iter:
@@ -44,6 +59,12 @@ def load_data_universal(client, file_paths, mode='train'):
                 if os.path.exists(local_path):
                     os.remove(local_path)
                 continue
+
+    # Flush remaining segments (pad to WINDOW_SIZE if enabled)
+    flushed = global_buffer.flush_remainder()
+    if flushed:
+        print(f"[{mode.upper()}] Flushed {len(flushed)} padded snippets from buffer.")
+        all_collected_samples.extend(flushed)
 
     print(f"[{mode.upper()}] Final Total Snippets: {len(all_collected_samples)}")
 
@@ -65,7 +86,7 @@ def load_data_universal(client, file_paths, mode='train'):
     return all_collected_samples
 
 
-def get_hdfs_files_filtered(client, directory, min_date_str=None, limit=None):
+def get_hdfs_files_filtered(client, directory, min_date_str=None, limit=None, eligible_cars=None):
     try:
         all_items = client.list(directory)
         csv_paths = []
@@ -76,6 +97,8 @@ def get_hdfs_files_filtered(client, directory, min_date_str=None, limit=None):
             status = client.status(item_path)
 
             if status['type'] == 'DIRECTORY':
+                if eligible_cars and item not in eligible_cars:
+                    continue
                 sub_items = client.list(item_path)
                 for f in sub_items:
                     if f.endswith(".csv"):
@@ -107,6 +130,42 @@ def get_hdfs_files_filtered(client, directory, min_date_str=None, limit=None):
 
 def filter_by_modality(dataset, is_charge):
     return [sample for sample in dataset if sample[1].get("charger_connected") == is_charge]
+
+
+def filter_files_by_date(file_paths, target_date_str):
+    """
+    Filter HDFS file paths to keep only files from a given date.
+    Extracts YYYYMMDD from filename, keeping only files where date == target_date_str.
+
+    Also picks the newest file per car when multiple files exist for the same date.
+    """
+    import re
+    from collections import defaultdict
+
+    car_files = defaultdict(list)
+
+    for path in file_paths:
+        fname = os.path.basename(path)
+        m = re.search(r'(\d{8})_\d{6}', fname)
+        if m:
+            file_date = m.group(1)
+            if file_date == target_date_str:
+                car_files[None].append(path)  # collect all matching files
+
+    kept = car_files.get(None, [])
+
+    # Group by car_id and keep only the newest file per car
+    car_best = {}
+    for path in kept:
+        fname = os.path.basename(path)
+        m = re.search(r'(EV_\d+)', fname)
+        car = m.group(1) if m else "unknown"
+        ts_match = re.search(r'(\d{8}_\d{6})', fname)
+        ts = ts_match.group(1) if ts_match else fname
+        if car not in car_best or ts > car_best[car][1]:
+            car_best[car] = (path, ts)
+
+    return [v[0] for v in car_best.values()]
 
 
 def save_csv_hdfs(data_rows, header, filename_prefix):

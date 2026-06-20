@@ -228,7 +228,7 @@ Request body:
 ```json
 {
   "car_id": "EV_001",
-  "vehicle_name": "VinFast VF8",
+  "car_name": "VinFast VF8",
   "vin_number": "VIN2026VF8X00001",
   "license_plate": "51A-12345",
   "battery_serial": "BAT-VF8-001",
@@ -240,7 +240,7 @@ Response (`201 Created`):
 ```json
 {
   "car_id": "EV_001",
-  "vehicle_name": "VinFast VF8",
+  "car_name": "VinFast VF8",
   "vin_number": "VIN2026VF8X00001",
   "license_plate": "51A-12345",
   "battery_serial": "BAT-VF8-001",
@@ -265,7 +265,7 @@ Response:
   "vehicles": [
     {
       "car_id": "EV_015",
-      "vehicle_name": "VinFast VF8",
+      "car_name": "VinFast VF8",
       "vin_number": "VIN123456",
       "license_plate": "51A-12345",
       "battery_serial": "BAT-001",
@@ -285,7 +285,7 @@ Response:
 ```json
 {
   "car_id": "EV_015",
-  "vehicle_name": "VinFast VF8",
+  "car_name": "VinFast VF8",
   "vin_number": "VIN123456",
   "license_plate": "51A-12345",
   "battery_serial": "BAT-001",
@@ -306,7 +306,7 @@ Response:
 ```json
 {
   "car_id": "EV_015",
-  "vehicle_name": "VinFast VF8",
+  "car_name": "VinFast VF8",
   "total": 2,
   "predictions": [
     {

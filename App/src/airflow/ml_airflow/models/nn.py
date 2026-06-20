@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 class EnsembleNN(nn.Module):
-    """Mạng NN tổng hợp (Meta-Learner) nhận đầu vào là 2 dự đoán (Sạc và Chạy)"""
+    """Ensemble NN (Meta-Learner) that takes 2 predictions (Charging and Driving) as input"""
     def __init__(self):
         super(EnsembleNN, self).__init__()
         self.net = nn.Sequential(
@@ -14,6 +14,6 @@ class EnsembleNN(nn.Module):
         )
 
     def forward(self, p_chg, p_drv):
-        # Nối 2 tensor lại thành shape (batch_size, 2)
+        # Concatenate 2 tensors into shape (batch_size, 2)
         x = torch.cat([p_chg, p_drv], dim=1) 
         return self.net(x)

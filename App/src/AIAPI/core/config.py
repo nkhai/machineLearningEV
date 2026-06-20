@@ -19,17 +19,17 @@ INFERENCE_BASE_DIR = "/raw_data/battery_telemetry/"
 WINDOW_SIZE = 128
 FEATURE_COLS = [
     "volt_V", "current_A", "soc_pct", "max_single_volt_V",
-    "min_single_volt_V", "max_temp_C", "min_temp_C"
+    "min_single_volt_V", "max_temp_C", "min_temp_C" #, "mileage_km"
 ]
 
 FEATURE_COLS_CHG = [
     "volt_V", "current_A", "soc_pct", "max_single_volt_V",
-    "min_single_volt_V", "max_temp_C", "min_temp_C"
+    "min_single_volt_V", "max_temp_C", "min_temp_C" #, "mileage_km"
 ]
 
 FEATURE_COLS_DRV = [
     "volt_V", "current_A", "soc_pct", "max_single_volt_V",
-    "min_single_volt_V", "max_temp_C", "min_temp_C"
+    "min_single_volt_V", "max_temp_C", "min_temp_C" #, "mileage_km"
 ]
 
 NUM_FILES_LIMIT = None

@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EV Status Monitor</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+
+        /* Sidebar */
+        .sidebar {
+            background-color: #ffffff;
+            border-right: 1px solid #dee2e6;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            position: fixed;
+            width: 16.66667%;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+        .vehicle-list-wrapper { flex-grow: 1; overflow-y: auto; margin-bottom: 15px; }
+        .vehicle-btn {
+            text-align: left; margin-bottom: 8px; border: 1px solid #e9ecef;
+            background-color: #fff; color: #495057; width: 100%;
+            padding: 10px 15px; border-radius: 6px; transition: all 0.2s;
+            display: flex; justify-content: space-between; align-items: center;
+            cursor: pointer;
+        }
+        .vehicle-btn:hover { background-color: #f1f3f5; transform: translateX(3px); }
+        .vehicle-btn.active { background-color: #e7f5ff; border-color: #1890ff; color: #0050b3; font-weight: 600; }
+
+        /* Main Content */
+        .main-content { margin-left: 16.66667%; padding: 30px; }
+
+        /* KPI Cards */
+        .kpi-card {
+            border-radius: 8px; color: white; padding: 15px; height: 90px;
+            display: flex; flex-direction: column; justify-content: center;
+            align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .bg-status { background-color: #00c853; }
+        .bg-soc { background-color: #00b0ff; }
+        .bg-capacity { background-color: #ffab00; }
+        .bg-mileage { background-color: #000000; }
+
+        .kpi-title { font-size: 12px; font-weight: 600; text-transform: uppercase; opacity: 0.9; margin-bottom: 4px; }
+        .kpi-value { font-size: 24px; font-weight: bold; }
+        .kpi-unit { font-size: 12px; font-weight: normal; margin-left: 2px; }
+
+        /* Content Cards */
+        .content-card {
+            background: white; border: 1px solid #e0e0e0; border-radius: 8px;
+            padding: 15px; height: 100%; box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+        .card-header-custom {
+            font-size: 13px; font-weight: 700; color: #555; text-transform: uppercase;
+            margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 8px;
+        }
+
+        /* Info Rows */
+        .info-row { padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; min-height: 38px; }
+        .info-label { font-weight: 600; color: #6c757d; }
+        .info-value { font-weight: 500; color: #212529; text-align: right; }
+
+        /* Log */
+        #logContent {
+            font-family: 'Courier New', monospace; font-size: 11px;
+            white-space: pre-wrap; overflow-y: auto; height: 210px;
+        }
+        #logContent::-webkit-scrollbar { width: 6px; }
+        #logContent::-webkit-scrollbar-track { background: #f1f1f1; }
+        #logContent::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+
+        /* Speed Gauge */
+        .gauge-container { position: relative; width: 130px; height: 130px; margin: 0 auto; }
+        .gauge-svg { transform: rotate(135deg); }
+        .gauge-text { position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); text-align: center; }
+        .gauge-value { font-size: 22px; font-weight: 700; color: #212529; }
+        .gauge-unit { font-size: 10px; color: #6c757d; }
+    </style>
+</head>
+<body>
+    <!-- Registration Modal -->
+    <div class="modal fade" id="modalRegister" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Register New Vehicle</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label">Car ID (System ID) *</label>
+                    <input type="text" class="form-control mb-3" id="regCarId" placeholder="e.g., EV_101">
+                    <label class="form-label">Vehicle Name</label>
+                    <input type="text" class="form-control mb-3" id="regCarName" placeholder="e.g., VF8-1">
+                    <label class="form-label">VIN Number</label>
+                    <input type="text" class="form-control mb-3" id="regVin" placeholder="Enter VIN">
+                    <label class="form-label">License Plate</label>
+                    <input type="text" class="form-control mb-3" id="regLicense" placeholder="e.g., 29A-123.45">
+                    <label class="form-label">Battery Serial</label>
+                    <input type="text" class="form-control mb-3" id="regBattery" placeholder="Enter Battery Serial">
+                    <label class="form-label">Motor Serial</label>
+                    <input type="text" class="form-control mb-3" id="regMotor" placeholder="Enter Motor Serial">
+                    
+                    <label class="form-label">User ID (Owner) *</label>
+                    <input type="text" class="form-control mb-3" id="regUserId" placeholder="e.g., phu_thanh_admin">
+                    
+                    <div id="regFeedback" class="text-danger small mt-2"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="btnSubmitReg">Save Vehicle</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h6 style="font-weight: 800; color: #212529;" class="mb-4">VEHICLE LIST</h6>
+        <div id="vehicleList" class="vehicle-list-wrapper"></div>
+        <button class="btn btn-outline-dark w-100 mt-auto" style="font-weight: 600;" data-bs-toggle="modal" data-bs-target="#modalRegister">
+            <i class="fa fa-plus me-2"></i>New EV
+        </button>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4 style="font-weight: 800;" class="m-0">ELECTRIC VEHICLE STATUS</h4>
+            <div>
+                <span class="text-muted me-2 small">Current State: </span>
+                <span id="topStatusText" class="fw-bold" style="font-size: 15px;"></span>
+            </div>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="row g-3 mb-3">
+            <div class="col-3"><div class="kpi-card bg-status"><div class="kpi-title">STATUS</div><div class="kpi-value" id="statusVal"></div></div></div>
+            <div class="col-3"><div class="kpi-card bg-soc"><div class="kpi-title">SOC</div><div class="kpi-value"><span id="socVal"></span><span class="kpi-unit">%</span></div></div></div>
+            <div class="col-3"><div class="kpi-card bg-capacity"><div class="kpi-title">CAPACITY</div><div class="kpi-value"><span id="capacityVal"></span><span class="kpi-unit">Ah</span></div></div></div>
+            <div class="col-3"><div class="kpi-card bg-mileage"><div class="kpi-title">MILEAGE</div><div class="kpi-value"><span id="mileageVal"></span><span class="kpi-unit">km</span></div></div></div>
+        </div>
+
+        <!-- Details Row -->
+        <div class="row g-3 mb-4 mt-3">
+            <!-- Cell Voltage -->
+            <div class="col-5">
+                <div class="content-card p-3" style="height: 200px;">
+                    <div class="card-header-custom mb-1">CELL VOLTAGE HEALTH</div>
+                    <div class="row align-items-center h-75 mt-2">
+                        <div class="col text-center border-end">
+                            <div class="text-secondary" style="font-size: 11px;">Max Single</div>
+                            <div id="maxCellVal" class="fw-bold text-danger" style="font-size: 22px;"></div>
+                        </div>
+                        <div class="col text-center border-end">
+                            <div class="text-secondary" style="font-size: 11px;">Min Single</div>
+                            <div id="minCellVal" class="fw-bold text-primary" style="font-size: 22px;"></div>
+                        </div>
+                        <div class="col text-center">
+                            <div class="text-secondary" style="font-size: 11px;">Diff (Imb)</div>
+                            <div id="diffCellVal" class="fw-bold text-dark" style="font-size: 22px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Thermal & Power -->
+            <div class="col-3">
+                <div class="content-card p-3" style="height: 200px;">
+                    <div class="card-header-custom mb-1">THERMAL & POWER</div>
+                    <div class="d-flex flex-column justify-content-center pt-3">
+                        <div class="mb-3 border-bottom pb-2">
+                            <span class="text-muted">Temp: </span>
+                            <span id="tempRangeVal" class="float-end fw-bold" style="font-size: 18px;"></span>
+                        </div>
+                        <div>
+                            <span class="text-muted">Power: </span>
+                            <span id="powerVal" class="float-end fw-bold" style="font-size: 18px;"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Speed Gauge -->
+            <div class="col-4">
+                <div class="content-card p-2" style="height: 200px;">
+                    <div class="card-header-custom text-center mb-0" style="border-bottom: none;">SPEED</div>
+                    <div class="gauge-container mt-2">
+                        <svg class="gauge-svg" width="130" height="130" viewBox="0 0 120 120">
+                            <circle cx="60" cy="60" r="50" fill="none" stroke="#e9ecef" stroke-width="10"
+                                stroke-dasharray="235.6 314.16" stroke-linecap="round"/>
+                            
+                            <circle id="gaugeArc" cx="60" cy="60" r="50" fill="none" stroke="#56a64b" stroke-width="10"
+                                stroke-dasharray="0 314.16" stroke-linecap="round"
+                                style="transition: stroke-dasharray 0.3s ease, stroke 0.3s ease;"/>
+                        </svg>
+                        <div class="gauge-text">
+                            <div id="gaugeValue" class="gauge-value">0</div>
+                            <div class="gauge-unit">km/h</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Row -->
+        <div class="row g-3 mb-3">
+            <!-- Vehicle Info -->
+            <div class="col-6">
+                <div class="content-card p-3" style="height: 270px; overflow-y: auto;">
+                    <div class="card-header-custom">VEHICLE INFORMATION</div>
+                    <div id="vehicleInfoContent" class="p-2">
+                        <div class="mt-4 text-muted text-center">No vehicle selected.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Logs -->
+            <div class="col-6">
+                <div class="content-card p-3" style="height: 270px;">
+                    <div class="d-flex align-items-center mb-2 border-bottom pb-1">
+                        <b style="font-size: 11px;">SYSTEM LOGS</b>
+                        <div class="btn-group btn-group-sm ms-2">
+                            <button type="button" class="btn btn-outline-success active" id="btnLogInfo">INFO</button>
+                            <button type="button" class="btn btn-outline-secondary" id="btnLogDebug">DEBUG</button>
+                        </div>
+                        <span id="logTimestamp" class="ms-auto text-muted" style="font-size: 10px;"></span>
+                    </div>
+                    <div id="logContent"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/admin.js"></script>
+</body>
+</html>

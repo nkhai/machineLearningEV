@@ -13,8 +13,8 @@ import xgboost as xgb
 from ml_airflow.config.config import HDFS_URL, HDFS_USER, HDFS_OUTPUT_DIR
 from ml_airflow.data_processing.snippetbuffer import GlobalSnippetBuffer
 
-def load_data_universal(client, file_paths, mode='train'):
-    global_buffer = GlobalSnippetBuffer(mode=mode)
+def load_data_universal(client, file_paths, mode='train', pad_short_windows=False):
+    global_buffer = GlobalSnippetBuffer(mode=mode, pad_short_windows=pad_short_windows)
     all_collected_samples = []
     
     file_paths = sorted(file_paths)
@@ -119,8 +119,9 @@ def save_csv_hdfs(data_rows, header, filename_prefix):
     writer.writerow(header)
     writer.writerows(data_rows)
     
-    vn_now = pendulum.now("Asia/Ho_Chi_Minh")
-    timestamp_str = vn_now.format("YYYYMMDD_HHmmss")
+    # Use local timezone (Asia/Ho_Chi_Minh)
+    local_now = pendulum.now("Asia/Ho_Chi_Minh")
+    timestamp_str = local_now.format("YYYYMMDD_HHmmss")
     filename = f"{filename_prefix}_{timestamp_str}.csv"
     hdfs_path = f"{HDFS_OUTPUT_DIR.rstrip('/')}/{filename}"
     
@@ -130,42 +131,42 @@ def save_csv_hdfs(data_rows, header, filename_prefix):
         except: client.makedirs(HDFS_OUTPUT_DIR)
             
         client.write(hdfs_path, data=csv_buffer.getvalue().encode('utf-8'), overwrite=True)
-        print(f"✓ Saved to HDFS: {hdfs_path}")
+        print(f"Saved to HDFS: {hdfs_path}")
     except Exception as e:
         print(f"Failed save HDFS: {e}")
 
 def save_artifacts_to_hdfs(client, hdfs_dir, suffix, model, scaler=None):
     """Save model and scaler directly from memory to HDFS (no local tmp files)"""
     
-    # Kiểm tra và tạo thư mục trên HDFS nếu chưa tồn tại
+    # Check and create directory on HDFS if it doesn't exist
     try: 
         client.status(hdfs_dir)
     except: 
         client.makedirs(hdfs_dir)
 
-    # 1. XGBoost Model (Lưu trực tiếp từ RAM)
+    # 1. XGBoost Model (Save directly from RAM)
     if model is not None:
-        # save_raw() xuất thẳng mô hình ra dạng byte, hỗ trợ định dạng json hoặc ubj
+        # save_raw() exports model directly to bytes, supports json or ubj format
         model_bytes = model.save_raw(raw_format='json') 
         
         client.write(f"{hdfs_dir}/xgb_model_{suffix}.json", data=model_bytes, overwrite=True)
-        print(f"✓ Successfully saved Model ({suffix}) to HDFS.")
+        print(f"Successfully saved Model ({suffix}) to HDFS.")
 
-    # 2. StandardScaler (Lưu qua bộ nhớ đệm BytesIO)
+    # 2. StandardScaler (Save via BytesIO buffer)
     if scaler is not None:
         scaler_buf = io.BytesIO()
-        joblib.dump(scaler, scaler_buf) # Dump thẳng vào bộ nhớ đệm RAM
-        scaler_buf.seek(0) # Kéo con trỏ về đầu luồng dữ liệu trước khi đọc
+        joblib.dump(scaler, scaler_buf) # Dump directly into RAM buffer
+        scaler_buf.seek(0) # Move pointer to start of data stream before reading
         
         client.write(f"{hdfs_dir}/scaler_{suffix}.joblib", data=scaler_buf, overwrite=True)
-        print(f"✓ Successfully saved Scaler ({suffix}) to HDFS.")
+        print(f"Successfully saved Scaler ({suffix}) to HDFS.")
 
     print(f"Completed saving artifacts for '{suffix}' to: {hdfs_dir}")
 
 def print_dataset_logs(dataset, name="DATASET"):
     print(f"\n--- DATASET DETAILS: {name.upper()} ---")
     info_map = defaultdict(lambda: defaultdict(set))
-    for _, meta in dataset:
+    for _, meta, _ in dataset:
         info_map[meta["car_id"]][meta["id_segment"]].update(meta["file_paths"])
         
     for car in sorted(info_map.keys()):
@@ -188,7 +189,7 @@ def load_artifacts_from_hdfs(client, hdfs_dir, suffix):
     model_local_path = os.path.join(local_tmp_dir, f"xgb_model_{suffix}.json")
     
     try:
-        # Kiểm tra file model có tồn tại không
+        # Check if model file exists
         if client.status(model_hdfs_path, strict=False):
             client.download(model_hdfs_path, model_local_path, overwrite=True)
             model = xgb.Booster()
@@ -204,7 +205,7 @@ def load_artifacts_from_hdfs(client, hdfs_dir, suffix):
     scaler_local_path = os.path.join(local_tmp_dir, f"scaler_{suffix}.joblib")
     
     try:
-        # Kiểm tra file scaler có tồn tại không
+        # Check if scaler file exists
         if client.status(scaler_hdfs_path, strict=False):
             client.download(scaler_hdfs_path, scaler_local_path, overwrite=True)
             scaler = joblib.load(scaler_local_path)

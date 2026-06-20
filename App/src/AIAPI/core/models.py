@@ -1,6 +1,7 @@
-from sqlalchemy import String, ForeignKey, JSON, Column, Table, DateTime, func
+from sqlalchemy import String, ForeignKey, JSON, Column, Table, DateTime, func, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime
+
 from core.database import Base
 
 
@@ -29,11 +30,12 @@ class Vehicle(Base):
     __tablename__ = "vehicles"
 
     car_id: Mapped[str] = mapped_column(String, primary_key=True)
-    vehicle_name: Mapped[str] = mapped_column(String, nullable=False)
+    car_name: Mapped[str] = mapped_column(String, nullable=False)
     vin_number: Mapped[str] = mapped_column(String, nullable=False)
     license_plate: Mapped[str] = mapped_column(String, nullable=True)
     battery_serial: Mapped[str] = mapped_column(String, nullable=True)
     motor_serial: Mapped[str] = mapped_column(String, nullable=True)
+    use_to_predict: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     user_id: Mapped[str] = mapped_column(String, ForeignKey("users.user_id"), nullable=False)
 
     owner: Mapped["User"] = relationship(back_populates="vehicles")

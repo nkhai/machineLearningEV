@@ -6,6 +6,10 @@ logging.getLogger("hdfs").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 logging.getLogger("requests").setLevel(logging.WARNING)
 
+# ==================== AIAPI CONFIG ====================
+AIAPI_URL = "http://localhost:8000"
+AIAPI_TIMEOUT = 1800
+
 # ==================== HDFS CONFIG ====================
 HDFS_URL = "http://hc1-c-0003u.hc.apac.bosch.com:9870"
 HDFS_USER = "hdfs"
@@ -41,4 +45,4 @@ FEATURE_COLS_DRV = [
 NUM_FILES_LIMIT=None
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-SEQ_LEN = 128 # Số bước thời gian mặc định
+SEQ_LEN = 128 # Default number of time steps
