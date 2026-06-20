@@ -1,0 +1,6 @@
+actual_max_capacity_Ah,avg_speed_kmh,vehicle_name,nominal_capacity_Ah,id,timestamp_s,regenerative_braking_Ah,mileage_km,motor_rpm,car_id,id_segment,accelerator_pedal_pct,min_single_volt_V,max_temp_C,volt_V,label,brake_pedal_pct,payload_kg,charger_connected,soc_pct,min_temp_C,hvac_active,car_model,gear_position,current_A,max_single_volt_V
+195.42,84.0,EV_105,210.0,DR776635,1120,0.0,117901.19,3360.0,EV_105,DR776635_15,54.0,4.048,65.0,211.5,0.0,0.0,90.59,0,65.6,61.15,1,SimuProA-5,D,8.5,4.053
+195.42,84.0,EV_105,210.0,DR776635,1130,0.0,117901.42,3360.0,EV_105,DR776635_15,54.0,4.047,65.0,210.0,0.0,0.0,90.59,0,65.59,61.17,1,SimuProA-5,D,8.0,4.052
+195.42,84.0,EV_105,210.0,DR776635,1140,0.0,117901.65,3360.0,EV_105,DR776635_15,54.0,4.046,65.0,208.5,0.0,0.0,90.59,0,65.58,61.19,1,SimuProA-5,D,7.5,4.051
+195.42,84.0,EV_105,210.0,DR776635,1150,0.0,117901.89,3360.0,EV_105,DR776635_15,54.0,4.045,65.0,207.0,0.0,0.0,90.59,0,65.57,61.21,1,SimuProA-5,D,7.0,4.05
+195.42,84.0,EV_105,210.0,DR776635,1160,0.0,117902.12,3360.0,EV_105,DR776635_15,54.0,4.044,65.0,205.5,0.0,0.0,90.59,0,65.56,61.23,1,SimuProA-5,D,6.5,4.049

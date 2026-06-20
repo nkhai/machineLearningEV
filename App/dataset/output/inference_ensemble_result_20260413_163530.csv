@@ -1,0 +1,4 @@
+car_id,max_mileage_km,prediction_method,gt_capacity,pred_ac_charging_slow_home_charging,pred_charging,pred_chg,pred_cruising,pred_dc_fast_charging_too_hot_35c,pred_driving,pred_drv,final_ensemble_pred,error
+EV_108,90682.0,Ensemble (Simple Avg Fallback),91.63,-1.0,99.50146484375,-1.0,-1.0,-1.0,109.2278060913086,-1.0,104.36463928222656,12.734639282226567
+EV_109,678720.0,Ensemble (Simple Avg Fallback),95.5,-1.0,95.45596313476562,-1.0,-1.0,-1.0,103.68608093261719,-1.0,99.5710220336914,4.071022033691406
+EV_110,228094.0,Ensemble (Simple Avg Fallback),104.8,-1.0,98.36097717285156,-1.0,-1.0,-1.0,103.68608093261719,-1.0,101.02352905273438,-3.776470947265622

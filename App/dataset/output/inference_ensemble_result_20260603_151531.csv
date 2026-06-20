@@ -1,0 +1,2 @@
+car_id,max_mileage_km,prediction_method,gt_capacity,pred_xgboost_chg,pred_xgboost_drv,final_ensemble_pred,error
+EV_104,44498.3,XGB (Driving Only),202.74,-1.0,184.19032287597656,184.19032287597656,-18.5496826171875

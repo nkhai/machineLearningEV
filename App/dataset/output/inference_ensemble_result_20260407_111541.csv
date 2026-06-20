@@ -1,0 +1,3 @@
+car_id,max_mileage_km,prediction_method,gt_capacity,pred_xgboost_chg,pred_xgboost_drv,final_ensemble_pred,error
+EV_016,16208.709445,Ensemble (Neural Network),95.45,95.68550109863281,95.99140930175781,2.781952142715454,-92.66804785728455
+EV_015,22554.013167,Ensemble (Neural Network),99.42,94.39850616455078,95.99140930175781,2.780395746231079,-96.63960425376892

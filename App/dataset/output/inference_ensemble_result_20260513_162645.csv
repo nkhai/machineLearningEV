@@ -1,0 +1,3 @@
+car_id,max_mileage_km,prediction_method,gt_capacity,pred_xgboost_chg,pred_xgboost_drv,final_ensemble_pred,error
+EV_016,16208.709445,Ensemble (Simple Avg Fallback),95.45,193.5577850341797,186.95184326171875,190.25482177734375,94.80482482910156
+EV_015,22554.013167,Ensemble (Simple Avg Fallback),99.42,193.49966430664062,186.95184326171875,190.2257537841797,90.80575561523438

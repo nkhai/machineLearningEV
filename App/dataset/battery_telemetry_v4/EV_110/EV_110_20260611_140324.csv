@@ -1,0 +1,4 @@
+volt_V,accelerator_pedal_pct,payload_kg,motor_rpm,charger_connected,min_single_volt_V,hvac_active,soc_pct,max_single_volt_V,avg_speed_kmh,current_A,nominal_capacity_Ah,vehicle_name,regenerative_braking_Ah,timestamp_s,brake_pedal_pct,id_segment,min_temp_C,mileage_km,id,actual_max_capacity_Ah,label,max_temp_C,gear_position,car_model,car_id
+325.175,0.0,75.96,0.0,1,3.651,1,100.0,3.652,0.0,-1.3,185.0,EV_110,0.0,1210,0.0,RC266002_11,5.3,32324.44,RC266002,181.09,0.0,7.3,P,SimuProB-5,EV_110
+325.336,0.0,75.96,0.0,1,3.649,1,100.0,3.65,0.0,-4.3,185.0,EV_110,0.0,1220,0.0,RC266002_11,5.2,32324.44,RC266002,181.09,0.0,7.2,P,SimuProB-5,EV_110
+324.983,0.0,75.96,0.0,1,3.647,1,100.0,3.648,0.0,-3.4,185.0,EV_110,0.0,1230,0.0,RC266002_11,5.1,32324.44,RC266002,181.09,0.0,7.1,P,SimuProB-5,EV_110
