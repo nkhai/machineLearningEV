@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+
+  <!-- MapReduce framework -->
+  <property>
+    <name>mapreduce.framework.name</name>
+    <value>yarn</value>
+  </property>
+
+  <!-- ApplicationMaster -->
+  <property>
+    <name>yarn.app.mapreduce.am.command-opts</name>
+    <value>-Xmx819m</value>
+  </property>
+
+  <!-- Map environment -->
+  <property>
+    <name>mapreduce.map.env</name>
+    <value>HADOOP_MAPRED_HOME=/opt/hadoop</value>
+  </property>
+
+  <property>
+    <name>mapreduce.reduce.env</name>
+    <value>HADOOP_MAPRED_HOME=/opt/hadoop</value>
+  </property>
+
+  <!-- Memory -->
+  <property>
+    <name>mapreduce.map.memory.mb</name>
+    <value>1024</value>
+  </property>
+
+  <property>
+    <name>mapreduce.reduce.memory.mb</name>
+    <value>1024</value>
+  </property>
+
+  <property>
+    <name>mapreduce.map.java.opts</name>
+    <value>-Xmx819m</value>
+  </property>
+
+  <property>
+    <name>mapreduce.reduce.java.opts</name>
+    <value>-Xmx819m</value>
+  </property>
+
+  <!-- CPU -->
+  <property>
+    <name>mapreduce.map.cpu.vcores</name>
+    <value>1</value>
+  </property>
+
+  <property>
+    <name>mapreduce.reduce.cpu.vcores</name>
+    <value>1</value>
+  </property>
+
+</configuration>

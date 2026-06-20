@@ -1,0 +1,50 @@
+# Python requirements for Lakehouse Platform
+
+# Kafka
+kafka-python==2.3.0
+confluent-kafka==2.13.0
+
+# Spark and Delta Lake
+pyspark==4.1.1
+delta-spark==4.0.1
+
+# HDFS
+hdfs==2.7.3
+pyarrow==23.0.0
+
+# Data Processing
+pandas==2.3.3
+numpy==2.2.6
+
+# Airflow (already included in Docker image, but listed for reference)
+apache-airflow==3.1.6
+apache-airflow-providers-apache-spark==5.5.0
+apache-airflow-providers-celery==3.15.1
+apache-airflow-providers-apache-hdfs==4.11.3
+
+# Database
+psycopg2-binary==2.9.11
+redis==6.4.0
+
+# Utilities
+python-dotenv==1.2.1
+pyyaml==6.0.3
+
+# Testing
+pytest==9.0.2
+pytest-cov==7.0.0
+
+# AI/ML
+torch==2.10.0
+xgboost==3.1.3
+scikit-learn==1.7.2
+tqdm==4.67.2
+tensorflow==2.21.0 
+keras==3.12.0
+
+#Time
+pendulum==3.2.0
+
+#Visualize
+matplotlib==3.10.8
+seaborn

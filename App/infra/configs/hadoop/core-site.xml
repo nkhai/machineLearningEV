@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+  <!-- Default FS -->
+  <property>
+    <name>fs.defaultFS</name>
+    <value>hdfs://${HOST_NAME}:8020</value>
+  </property>
+
+  <!-- Disable security for DEV -->
+  <property>
+    <name>hadoop.security.authentication</name>
+    <value>simple</value>
+  </property>
+
+  <!-- Required HTTP filters -->
+  <property>
+    <name>hadoop.http.filter.initializers</name>
+    <value>
+      org.apache.hadoop.http.lib.StaticUserWebFilter,
+      org.apache.hadoop.security.AuthenticationFilterInitializer
+    </value>
+  </property>
+
+  <!-- ========================= -->
+  <!-- CORS ENABLE (CRITICAL)    -->
+  <!-- ========================= -->
+
+  <property>
+    <name>hadoop.http.cross-origin.enabled</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <name>hadoop.http.cross-origin.allowed-origins</name>
+    <value>*</value>
+  </property>
+
+  <property>
+    <name>hadoop.http.cross-origin.allowed-methods</name>
+    <value>GET,POST,PUT,DELETE,OPTIONS</value>
+  </property>
+
+  <property>
+    <name>hadoop.http.cross-origin.allowed-headers</name>
+    <value>
+      X-Requested-With,Content-Type,Accept,Origin,Authorization
+    </value>
+  </property>
+
+  <property>
+    <name>hadoop.http.cross-origin.max-age</name>
+    <value>1800</value>
+  </property>
+
+</configuration>

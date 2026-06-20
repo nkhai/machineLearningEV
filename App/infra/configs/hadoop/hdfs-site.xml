@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+  <!-- ================================================== -->
+  <!-- NameNode                                          -->
+  <!-- ================================================== -->
+
+  <property>
+    <name>dfs.namenode.name.dir</name>
+    <value>file:///hadoop/dfs/name</value>
+  </property>
+
+  <!-- Advertise NameNode to clients -->
+  <property>
+    <name>dfs.namenode.rpc-address</name>
+    <value>${HOST_NAME}:8020</value>
+  </property>
+
+  <!-- Bind RPC on all interfaces -->
+  <property>
+    <name>dfs.namenode.rpc-bind-host</name>
+    <value>0.0.0.0</value>
+  </property>
+
+  <!-- Web UI -->
+  <property>
+    <name>dfs.namenode.http-address</name>
+    <value>0.0.0.0:9870</value>
+  </property>
+
+  <property>
+    <name>dfs.namenode.http-bind-host</name>
+    <value>0.0.0.0</value>
+  </property>
+
+  <!-- ================================================== -->
+  <!-- DataNode                                          -->
+  <!-- ================================================== -->
+
+  <property>
+    <name>dfs.datanode.data.dir</name>
+    <value>file:///hadoop/dfs/data</value>
+  </property>
+
+  <!-- Bind DataNode on all interfaces -->
+  <property>
+    <name>dfs.datanode.bind-address</name>
+    <value>0.0.0.0</value>
+  </property>
+
+  <!-- FORCE DataNode to advertise hostname (NOT IP) -->
+  <property>
+    <name>dfs.datanode.use.hostname</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <name>dfs.client.use.datanode.hostname</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <name>dfs.datanode.hostname</name>
+    <value>${HOST_NAME}</value>
+  </property>
+
+  <!-- Data transfer port (bind, NOT advertise hostname here) -->
+  <property>
+    <name>dfs.datanode.address</name>
+    <value>0.0.0.0:9866</value>
+  </property>
+
+  <!-- DataNode HTTP / WebHDFS -->
+  <property>
+    <name>dfs.datanode.http.address</name>
+    <value>0.0.0.0:9864</value>
+  </property>
+
+  <!-- ================================================== -->
+  <!-- Dev / Single node                                 -->
+  <!-- ================================================== -->
+
+  <property>
+    <name>dfs.replication</name>
+    <value>1</value>
+  </property>
+
+  <property>
+    <name>dfs.permissions.enabled</name>
+    <value>false</value>
+  </property>
+
+  <!-- ================================================== -->
+  <!-- WebHDFS                                           -->
+  <!-- ================================================== -->
+
+  <property>
+    <name>dfs.webhdfs.enabled</name>
+    <value>true</value>
+  </property>
+
+</configuration>

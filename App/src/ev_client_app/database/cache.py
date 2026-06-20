@@ -1,0 +1,1 @@
+registered_cars = set()
