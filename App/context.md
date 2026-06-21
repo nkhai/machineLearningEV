@@ -1,7 +1,7 @@
 # Chat Session Context — Battery Health ML Pipeline
-> **Date:** 2026-06-11 to 2026-06-20  
+> **Date:** 2026-06-11 to 2026-06-21  
 > **Project:** `eet-dp-predictive-ai-concept`  
-> **Scope:** Math documentation, XGBoost derivations, EnsembleNN training loop
+> **Scope:** Math documentation, XGBoost derivations, EnsembleNN training loop, EDA / data validation / SOM anomaly detection
 
 ---
 
@@ -377,3 +377,100 @@ Separate set of 8 images created by `docs/generate_math_images.py`:
 
 > These images are referenced in `docs/math_analysis.md`.  
 > To regenerate: `python src/AIAPI/docs/generate_math_images.py`
+
+---
+
+## Session 2026-06-21 — Data Quality & Anomaly Detection
+
+> **Scope:** Local EDA (fg-data-profiling), data validation (Great Expectations),
+> unsupervised anomaly detection (SOM). HDFS was inaccessible, so all work used a
+> local export of the dataset.
+
+### Environment (IMPORTANT)
+
+- **Project venv:** `.venv` at repo root → `/Users/mac/Desktop/khaiworkplace/EV_Project/machineLearningEV/.venv`
+  - Activate: `source .venv/bin/activate`
+  - Has pandas 2.3.3, matplotlib 3.10.8, numpy. **Global `python3` has NO pandas** — always use the venv. `python` exists only inside the venv.
+- **fg-data-profiling 4.19.1:** import name is `data_profiling`; needed `pip install "setuptools<81"` (provides `pkg_resources`).
+- **Great Expectations 1.18.1** (GX Core): `import great_expectations as gx`, `from great_expectations import expectations as gxe`.
+- **SOM:** `minisom` + `sklearn.preprocessing.MinMaxScaler`.
+- **OS:** macOS, zsh.
+
+### Local Dataset (`App/dataset/`)
+
+- **`battery_telemetry_v4/{car_id}/*.csv`** — local export of raw telemetry.
+  - 11 cars: EV_066, EV_101–EV_110. Focus: EV_104, EV_105, EV_109, EV_110.
+  - **2,440 CSVs · 200,609 rows · 26 columns · 1,526 segments.**
+  - Per-car rows/files: EV_066 = 1322/15 (smallest), EV_104 = 29016/359, EV_105 = 23368/315, EV_109 = 22995/315, EV_110 = 22658/313.
+  - Sessions: 53,727 charging vs 146,882 driving. 0 duplicates. Nulls only in `vehicle_name` (20,542). `label` constant 0.
+  - Numeric ranges: current_A −332→328, volt_V 205.5–445, soc_pct 5.32–100, actual_max_capacity 164–205, temps −4.8→65.
+- **`output/`** — prediction CSVs.
+
+### S3-1 — EDA via fg-data-profiling
+
+- **Notebook:** `notebooks/eda_battery_telemetry.ipynb` — actually executed (not mock).
+- **Reports → `App/dataset/eda_reports/`** (all real, generated):
+  - `eda_full_report.html` (16.5 MB), `eda_compare_chg_drv.html` (14.8 MB), `eda_ts_EV_104.html` (8 MB), `eda_compare_focus_cars.html` (1.2 MB), `eda_predictions_report.html` (7.4 MB).
+- **Two bugs fixed:**
+  1. `compare()` instance method takes a single report → use module-level `from data_profiling import compare; compare([reports])`.
+  2. 4-dataset comparison needs 4 colors → `PALETTE = ["#1f77b4","#ff7f0e","#2ca02c","#d62728"]` via `html={"style":{"primary_colors":PALETTE}}`.
+- **Guide:** `App/src/AIAPI/docs/fg_data_profiling_guide.md` + 4 preview PNGs from `docs/generate_eda_preview_images.py` (eda_01_dataset_overview, eda_02_feature_distributions, eda_03_capacity_by_car, eda_04_prediction_error).
+
+### S3-2 — Data Validation via Great Expectations
+
+- **Script:** `App/src/AIAPI/data_quality/gx_battery_telemetry.py` — **33 expectations, all pass.**
+  - 3 groups: **A** (ANALYSIS — schema/completeness/cardinality), **B** (CONSTRAINT — value sets / cross-field), **C** (LIMIT — physical bounds).
+  - **Key gotcha:** create the context BEFORE building the suite. `build_suite()` returns `gx.ExpectationSuite(name=..., expectations=[list])`, then `context.suites.add(build_suite())`. Avoids `DataContextRequiredError`.
+  - Output → `App/dataset/gx_results/validation_result.json`.
+- **Guide:** `App/src/AIAPI/docs/great_expectations_guide.md` + 3 PNGs from `docs/generate_gx_images.py` (gx_01_workflow, gx_02_expectation_map, gx_03_validation_result).
+
+### S3-3 — Anomaly Detection via SOM (Self-Organizing Map)
+
+- **Reference impl:** `machineLearningA-Z/DL.P2.Self_Organizing_Map(SOM)/SOM.py`.
+- **Script:** `App/src/AIAPI/data_quality/som_anomaly_detection.py`
+  - Aggregates 200,609 rows → **1,526 segment vectors** (mean+std of 13 SIGNALS = 26 features), `MinMaxScaler`, `MiniSom 14×14` (σ=1.0, lr=0.5, 2000 iters, seed 42).
+  - Anomaly score = **MID** (mean inter-neuron distance) of the winning neuron; threshold = p95.
+  - SIGNALS: volt_V, current_A, soc_pct, avg_speed_kmh, motor_rpm, min_single_volt_V, max_single_volt_V, min_temp_C, max_temp_C, accelerator_pedal_pct, brake_pedal_pct, regenerative_braking_Ah, actual_max_capacity_Ah.
+  - Outputs → `App/dataset/som_results/som_anomaly_ranking.csv` + 4 charts (som_01_distance_map, som_02_score_distribution, som_03_top_cases, som_04_feature_compare).
+  - **Flagged 77 anomalies. Top case: EV_066 / DR101229_2 (score 1.000).**
+- **Guide:** `App/src/AIAPI/docs/som_anomaly_detection_guide.md`.
+
+### S3-4 — Worked Case Study: EV_066 / DR101229_2 (rank #1)
+
+File: `App/dataset/battery_telemetry_v4/EV_066/EV_066_20260508_151315.csv`.
+Compared target (128 rows) vs normal driving baseline (1,070 segments / 141,572 rows):
+
+| Signal | DR101229_2 | Normal | Flag |
+|---|---:|---:|---|
+| min_single_volt_V | **2.08** (floored at 2.0 for 46% of rows) | 3.98 | 🔴 cell under-voltage |
+| max_single_volt_V | 2.96 (min 2.70) | 4.14 | 🔴 strongest cell collapsing |
+| volt_V (pack) | 296 (314→278) | 362 | 🔴 pack sagging |
+| current_A | **151** (up to 191) | 67 | 🔴 ~2.3× normal |
+| soc_pct | 93% | 66% | ⚠️ high SoC but voltage collapsing |
+| accelerator_pedal_pct | 14% | 37% | ⚠️ low pedal, high current |
+
+- **Diagnosis:** at 93% SoC the weakest cell is pinned at the 2.0 V floor while drawing 2–3× normal current at only 14% accelerator → classic **severely degraded / failing cell** (or voltage-sensor fault).
+- **Key point:** GX min/max rules would MISS this — each individual value is within range; it's the **combination** that's abnormal, which is exactly what the SOM catches.
+- `DR101229_1` (preceding segment, NOT flagged) keeps cells at 2.4–3.6 V — low but not floored.
+- **Chart:** `App/src/AIAPI/docs/images/som_05_case_DR101229_2.png` (6-panel within-car time-series comparison).
+- Documented as a "Worked case study" section in `som_anomaly_detection_guide.md`.
+- EV_066 SoH = 193.72/210 = 92.2%.
+
+### S3-5 — Lesson
+
+User explicitly checked whether reports were actually generated (caught a case where docs claimed execution without output existing). **Always verify outputs exist on disk**, don't just write code/docs that claim to run.
+
+### S3 Artifacts Map
+
+| Path | Type |
+|---|---|
+| `notebooks/eda_battery_telemetry.ipynb` | fg-data-profiling EDA notebook |
+| `App/dataset/eda_reports/*.html` | 5 generated EDA reports |
+| `App/src/AIAPI/docs/fg_data_profiling_guide.md` + `generate_eda_preview_images.py` | EDA guide + 4 PNGs |
+| `App/src/AIAPI/data_quality/gx_battery_telemetry.py` | GX — 33 expectations |
+| `App/dataset/gx_results/validation_result.json` | GX output |
+| `App/src/AIAPI/docs/great_expectations_guide.md` + `generate_gx_images.py` | GX guide + 3 PNGs |
+| `App/src/AIAPI/data_quality/som_anomaly_detection.py` | SOM detector |
+| `App/dataset/som_results/som_anomaly_ranking.csv` + 4 charts | SOM output |
+| `App/src/AIAPI/docs/som_anomaly_detection_guide.md` | SOM guide + case study |
+| `App/src/AIAPI/docs/images/som_05_case_DR101229_2.png` | Case-study chart |

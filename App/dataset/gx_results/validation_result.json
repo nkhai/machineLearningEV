@@ -1,0 +1,1133 @@
+{
+  "success": true,
+  "results": [
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_table_columns_to_match_set",
+        "kwargs": {
+          "batch_id": "battery_pandas-telemetry",
+          "column_set": [
+            "actual_max_capacity_Ah",
+            "nominal_capacity_Ah",
+            "car_id",
+            "id_segment",
+            "timestamp_s",
+            "volt_V",
+            "current_A",
+            "soc_pct",
+            "charger_connected",
+            "min_single_volt_V",
+            "max_single_volt_V",
+            "min_temp_C",
+            "max_temp_C",
+            "motor_rpm",
+            "avg_speed_kmh",
+            "accelerator_pedal_pct",
+            "brake_pedal_pct",
+            "regenerative_braking_Ah",
+            "payload_kg",
+            "mileage_km",
+            "hvac_active",
+            "gear_position",
+            "car_model"
+          ],
+          "exact_match": false
+        },
+        "meta": {},
+        "id": "22f12da5-06ff-45c3-934d-70682ee39bd2",
+        "severity": "critical"
+      },
+      "result": {
+        "observed_value": [
+          "accelerator_pedal_pct",
+          "actual_max_capacity_Ah",
+          "avg_speed_kmh",
+          "brake_pedal_pct",
+          "car_id",
+          "car_model",
+          "charger_connected",
+          "current_A",
+          "gear_position",
+          "hvac_active",
+          "id",
+          "id_segment",
+          "label",
+          "max_single_volt_V",
+          "max_temp_C",
+          "mileage_km",
+          "min_single_volt_V",
+          "min_temp_C",
+          "motor_rpm",
+          "nominal_capacity_Ah",
+          "payload_kg",
+          "regenerative_braking_Ah",
+          "soc_pct",
+          "timestamp_s",
+          "vehicle_name",
+          "volt_V"
+        ],
+        "details": {
+          "mismatched": {
+            "unexpected": [
+              "id",
+              "label",
+              "vehicle_name"
+            ]
+          }
+        }
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    },
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_table_row_count_to_be_between",
+        "kwargs": {
+          "batch_id": "battery_pandas-telemetry",
+          "min_value": 1000
+        },
+        "meta": {},
+        "id": "3e29e043-da33-4ff3-b926-bb0b65971ad1",
+        "severity": "warning"
+      },
+      "result": {
+        "observed_value": 200609
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    },
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_column_pair_values_a_to_be_greater_than_b",
+        "kwargs": {
+          "batch_id": "battery_pandas-telemetry",
+          "column_A": "max_single_volt_V",
+          "column_B": "min_single_volt_V",
+          "or_equal": true
+        },
+        "meta": {},
+        "id": "d758f1eb-1ed6-4a2e-be13-4767a0ec041d",
+        "severity": "critical"
+      },
+      "result": {
+        "element_count": 200609,
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0,
+        "partial_unexpected_list": [],
+        "missing_count": 0,
+        "missing_percent": 0.0,
+        "unexpected_percent_total": 0.0,
+        "unexpected_percent_nonmissing": 0.0,
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": []
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    },
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_column_pair_values_a_to_be_greater_than_b",
+        "kwargs": {
+          "batch_id": "battery_pandas-telemetry",
+          "column_A": "max_temp_C",
+          "column_B": "min_temp_C",
+          "or_equal": true
+        },
+        "meta": {},
+        "id": "3f30a109-3ecf-477f-af7d-74414f59d7be",
+        "severity": "critical"
+      },
+      "result": {
+        "element_count": 200609,
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0,
+        "partial_unexpected_list": [],
+        "missing_count": 0,
+        "missing_percent": 0.0,
+        "unexpected_percent_total": 0.0,
+        "unexpected_percent_nonmissing": 0.0,
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": []
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    },
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_column_pair_values_a_to_be_greater_than_b",
+        "kwargs": {
+          "batch_id": "battery_pandas-telemetry",
+          "column_A": "nominal_capacity_Ah",
+          "column_B": "actual_max_capacity_Ah",
+          "or_equal": true
+        },
+        "meta": {},
+        "id": "c3ab456f-77d0-412b-87c9-a635816f3821",
+        "severity": "critical"
+      },
+      "result": {
+        "element_count": 200609,
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0,
+        "partial_unexpected_list": [],
+        "missing_count": 0,
+        "missing_percent": 0.0,
+        "unexpected_percent_total": 0.0,
+        "unexpected_percent_nonmissing": 0.0,
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": []
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    },
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_column_values_to_not_be_null",
+        "kwargs": {
+          "batch_id": "battery_pandas-telemetry",
+          "column": "car_id"
+        },
+        "meta": {},
+        "id": "2058a39d-2db6-46e0-afc2-229722dd66e3",
+        "severity": "critical"
+      },
+      "result": {
+        "element_count": 200609,
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0,
+        "partial_unexpected_list": [],
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": []
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    },
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_column_unique_value_count_to_be_between",
+        "kwargs": {
+          "batch_id": "battery_pandas-telemetry",
+          "column": "car_id",
+          "min_value": 11,
+          "max_value": 11
+        },
+        "meta": {},
+        "id": "61925482-d139-48e2-8d84-492eae1f9be7",
+        "severity": "warning"
+      },
+      "result": {
+        "observed_value": 11
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    },
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_column_values_to_be_in_set",
+        "kwargs": {
+          "batch_id": "battery_pandas-telemetry",
+          "column": "car_id",
+          "value_set": [
+            "EV_066",
+            "EV_101",
+            "EV_102",
+            "EV_103",
+            "EV_104",
+            "EV_105",
+            "EV_106",
+            "EV_107",
+            "EV_108",
+            "EV_109",
+            "EV_110"
+          ]
+        },
+        "meta": {},
+        "id": "cc7ce758-6def-4855-a7dd-2e62ab12f8dc",
+        "severity": "critical"
+      },
+      "result": {
+        "element_count": 200609,
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0,
+        "partial_unexpected_list": [],
+        "missing_count": 0,
+        "missing_percent": 0.0,
+        "unexpected_percent_total": 0.0,
+        "unexpected_percent_nonmissing": 0.0,
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": []
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    },
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_column_values_to_not_be_null",
+        "kwargs": {
+          "batch_id": "battery_pandas-telemetry",
+          "column": "id_segment"
+        },
+        "meta": {},
+        "id": "2260bbd6-a678-4371-b94b-3b1b1222fd8d",
+        "severity": "critical"
+      },
+      "result": {
+        "element_count": 200609,
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0,
+        "partial_unexpected_list": [],
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": []
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    },
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_column_values_to_not_be_null",
+        "kwargs": {
+          "batch_id": "battery_pandas-telemetry",
+          "column": "actual_max_capacity_Ah"
+        },
+        "meta": {},
+        "id": "eee9791a-4698-4df2-9167-83f401f1b123",
+        "severity": "critical"
+      },
+      "result": {
+        "element_count": 200609,
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0,
+        "partial_unexpected_list": [],
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": []
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    },
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_column_values_to_be_between",
+        "kwargs": {
+          "batch_id": "battery_pandas-telemetry",
+          "column": "actual_max_capacity_Ah",
+          "min_value": 120.0,
+          "max_value": 210.0
+        },
+        "meta": {},
+        "id": "bfcba45f-c2b7-49b5-bb5d-c1d8c7656d2d",
+        "severity": "warning"
+      },
+      "result": {
+        "element_count": 200609,
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0,
+        "partial_unexpected_list": [],
+        "missing_count": 0,
+        "missing_percent": 0.0,
+        "unexpected_percent_total": 0.0,
+        "unexpected_percent_nonmissing": 0.0,
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": []
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    },
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_column_values_to_not_be_null",
+        "kwargs": {
+          "batch_id": "battery_pandas-telemetry",
+          "column": "nominal_capacity_Ah"
+        },
+        "meta": {},
+        "id": "3f72ab66-08c7-4588-ab94-7fdd25d5a9da",
+        "severity": "critical"
+      },
+      "result": {
+        "element_count": 200609,
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0,
+        "partial_unexpected_list": [],
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": []
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    },
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_column_values_to_be_in_set",
+        "kwargs": {
+          "batch_id": "battery_pandas-telemetry",
+          "column": "nominal_capacity_Ah",
+          "value_set": [
+            185.0,
+            210.0
+          ]
+        },
+        "meta": {},
+        "id": "a3225b88-f158-44ca-87c1-72f1f1975941",
+        "severity": "critical"
+      },
+      "result": {
+        "element_count": 200609,
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0,
+        "partial_unexpected_list": [],
+        "missing_count": 0,
+        "missing_percent": 0.0,
+        "unexpected_percent_total": 0.0,
+        "unexpected_percent_nonmissing": 0.0,
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": []
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    },
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_column_values_to_not_be_null",
+        "kwargs": {
+          "batch_id": "battery_pandas-telemetry",
+          "column": "charger_connected"
+        },
+        "meta": {},
+        "id": "fce777dd-b508-48bf-8ab4-8f1a1da96a27",
+        "severity": "critical"
+      },
+      "result": {
+        "element_count": 200609,
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0,
+        "partial_unexpected_list": [],
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": []
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    },
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_column_values_to_be_in_set",
+        "kwargs": {
+          "batch_id": "battery_pandas-telemetry",
+          "column": "charger_connected",
+          "value_set": [
+            0,
+            1
+          ]
+        },
+        "meta": {},
+        "id": "0dc9baa8-d24c-4533-814f-15aa9bfb04f6",
+        "severity": "critical"
+      },
+      "result": {
+        "element_count": 200609,
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0,
+        "partial_unexpected_list": [],
+        "missing_count": 0,
+        "missing_percent": 0.0,
+        "unexpected_percent_total": 0.0,
+        "unexpected_percent_nonmissing": 0.0,
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": []
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    },
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_column_values_to_not_be_null",
+        "kwargs": {
+          "batch_id": "battery_pandas-telemetry",
+          "column": "timestamp_s"
+        },
+        "meta": {},
+        "id": "e1f798d6-a91b-4320-8589-00e5269efa07",
+        "severity": "critical"
+      },
+      "result": {
+        "element_count": 200609,
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0,
+        "partial_unexpected_list": [],
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": []
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    },
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_column_values_to_be_between",
+        "kwargs": {
+          "batch_id": "battery_pandas-telemetry",
+          "column": "timestamp_s",
+          "min_value": 0.0
+        },
+        "meta": {},
+        "id": "3607a56a-f4b8-486b-b5be-f1e8d066a4ec",
+        "severity": "warning"
+      },
+      "result": {
+        "element_count": 200609,
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0,
+        "partial_unexpected_list": [],
+        "missing_count": 0,
+        "missing_percent": 0.0,
+        "unexpected_percent_total": 0.0,
+        "unexpected_percent_nonmissing": 0.0,
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": []
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    },
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_column_values_to_be_in_set",
+        "kwargs": {
+          "batch_id": "battery_pandas-telemetry",
+          "column": "gear_position",
+          "value_set": [
+            "D",
+            "P"
+          ]
+        },
+        "meta": {},
+        "id": "d8b9d931-16e0-4bc7-8e1a-968c0ac545a6",
+        "severity": "warning"
+      },
+      "result": {
+        "element_count": 200609,
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0,
+        "partial_unexpected_list": [],
+        "missing_count": 0,
+        "missing_percent": 0.0,
+        "unexpected_percent_total": 0.0,
+        "unexpected_percent_nonmissing": 0.0,
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": []
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    },
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_column_values_to_be_in_set",
+        "kwargs": {
+          "batch_id": "battery_pandas-telemetry",
+          "column": "hvac_active",
+          "value_set": [
+            0,
+            1
+          ]
+        },
+        "meta": {},
+        "id": "2e5ec048-0c85-4e72-b841-648dbb6c0917",
+        "severity": "critical"
+      },
+      "result": {
+        "element_count": 200609,
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0,
+        "partial_unexpected_list": [],
+        "missing_count": 0,
+        "missing_percent": 0.0,
+        "unexpected_percent_total": 0.0,
+        "unexpected_percent_nonmissing": 0.0,
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": []
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    },
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_column_values_to_be_between",
+        "kwargs": {
+          "batch_id": "battery_pandas-telemetry",
+          "column": "soc_pct",
+          "min_value": 0.0,
+          "max_value": 100.0
+        },
+        "meta": {},
+        "id": "6627550d-2c23-4af8-86fe-2a2db5174610",
+        "severity": "warning"
+      },
+      "result": {
+        "element_count": 200609,
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0,
+        "partial_unexpected_list": [],
+        "missing_count": 0,
+        "missing_percent": 0.0,
+        "unexpected_percent_total": 0.0,
+        "unexpected_percent_nonmissing": 0.0,
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": []
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    },
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_column_values_to_be_between",
+        "kwargs": {
+          "batch_id": "battery_pandas-telemetry",
+          "column": "accelerator_pedal_pct",
+          "min_value": 0.0,
+          "max_value": 100.0
+        },
+        "meta": {},
+        "id": "f0bc051c-3daf-4ae9-97f2-a8d2c2bfadcd",
+        "severity": "warning"
+      },
+      "result": {
+        "element_count": 200609,
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0,
+        "partial_unexpected_list": [],
+        "missing_count": 0,
+        "missing_percent": 0.0,
+        "unexpected_percent_total": 0.0,
+        "unexpected_percent_nonmissing": 0.0,
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": []
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    },
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_column_values_to_be_between",
+        "kwargs": {
+          "batch_id": "battery_pandas-telemetry",
+          "column": "brake_pedal_pct",
+          "min_value": 0.0,
+          "max_value": 100.0
+        },
+        "meta": {},
+        "id": "14cc7516-d1fa-4991-a648-ce08103e08bb",
+        "severity": "warning"
+      },
+      "result": {
+        "element_count": 200609,
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0,
+        "partial_unexpected_list": [],
+        "missing_count": 0,
+        "missing_percent": 0.0,
+        "unexpected_percent_total": 0.0,
+        "unexpected_percent_nonmissing": 0.0,
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": []
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    },
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_column_values_to_be_between",
+        "kwargs": {
+          "batch_id": "battery_pandas-telemetry",
+          "column": "avg_speed_kmh",
+          "min_value": 0.0,
+          "max_value": 200.0
+        },
+        "meta": {},
+        "id": "e14ac1b2-8bf5-45f7-babd-5364cdf0a6f2",
+        "severity": "warning"
+      },
+      "result": {
+        "element_count": 200609,
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0,
+        "partial_unexpected_list": [],
+        "missing_count": 0,
+        "missing_percent": 0.0,
+        "unexpected_percent_total": 0.0,
+        "unexpected_percent_nonmissing": 0.0,
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": []
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    },
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_column_values_to_be_between",
+        "kwargs": {
+          "batch_id": "battery_pandas-telemetry",
+          "column": "motor_rpm",
+          "min_value": 0.0,
+          "max_value": 20000.0
+        },
+        "meta": {},
+        "id": "5dc463a7-cfed-4952-89d0-069be62657e2",
+        "severity": "warning"
+      },
+      "result": {
+        "element_count": 200609,
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0,
+        "partial_unexpected_list": [],
+        "missing_count": 0,
+        "missing_percent": 0.0,
+        "unexpected_percent_total": 0.0,
+        "unexpected_percent_nonmissing": 0.0,
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": []
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    },
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_column_values_to_be_between",
+        "kwargs": {
+          "batch_id": "battery_pandas-telemetry",
+          "column": "volt_V",
+          "min_value": 150.0,
+          "max_value": 500.0
+        },
+        "meta": {},
+        "id": "02d3a467-3ead-40ba-950f-e28c3f151cb7",
+        "severity": "warning"
+      },
+      "result": {
+        "element_count": 200609,
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0,
+        "partial_unexpected_list": [],
+        "missing_count": 0,
+        "missing_percent": 0.0,
+        "unexpected_percent_total": 0.0,
+        "unexpected_percent_nonmissing": 0.0,
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": []
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    },
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_column_values_to_be_between",
+        "kwargs": {
+          "batch_id": "battery_pandas-telemetry",
+          "column": "min_single_volt_V",
+          "min_value": 2.0,
+          "max_value": 4.6
+        },
+        "meta": {},
+        "id": "a4c4bbf6-8eb7-433c-93f8-67f48ba69adb",
+        "severity": "warning"
+      },
+      "result": {
+        "element_count": 200609,
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0,
+        "partial_unexpected_list": [],
+        "missing_count": 0,
+        "missing_percent": 0.0,
+        "unexpected_percent_total": 0.0,
+        "unexpected_percent_nonmissing": 0.0,
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": []
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    },
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_column_values_to_be_between",
+        "kwargs": {
+          "batch_id": "battery_pandas-telemetry",
+          "column": "max_single_volt_V",
+          "min_value": 2.0,
+          "max_value": 4.6
+        },
+        "meta": {},
+        "id": "97cee259-374b-436b-baf8-cd12efc8634c",
+        "severity": "warning"
+      },
+      "result": {
+        "element_count": 200609,
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0,
+        "partial_unexpected_list": [],
+        "missing_count": 0,
+        "missing_percent": 0.0,
+        "unexpected_percent_total": 0.0,
+        "unexpected_percent_nonmissing": 0.0,
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": []
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    },
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_column_values_to_be_between",
+        "kwargs": {
+          "batch_id": "battery_pandas-telemetry",
+          "column": "min_temp_C",
+          "min_value": -40.0,
+          "max_value": 80.0
+        },
+        "meta": {},
+        "id": "b2fbecb3-778f-43bc-bc5a-04da8b9f2eac",
+        "severity": "warning"
+      },
+      "result": {
+        "element_count": 200609,
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0,
+        "partial_unexpected_list": [],
+        "missing_count": 0,
+        "missing_percent": 0.0,
+        "unexpected_percent_total": 0.0,
+        "unexpected_percent_nonmissing": 0.0,
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": []
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    },
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_column_values_to_be_between",
+        "kwargs": {
+          "batch_id": "battery_pandas-telemetry",
+          "column": "max_temp_C",
+          "min_value": -40.0,
+          "max_value": 80.0
+        },
+        "meta": {},
+        "id": "6f1140db-58b0-4062-88a3-8a3a3387aa70",
+        "severity": "warning"
+      },
+      "result": {
+        "element_count": 200609,
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0,
+        "partial_unexpected_list": [],
+        "missing_count": 0,
+        "missing_percent": 0.0,
+        "unexpected_percent_total": 0.0,
+        "unexpected_percent_nonmissing": 0.0,
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": []
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    },
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_column_values_to_be_between",
+        "kwargs": {
+          "batch_id": "battery_pandas-telemetry",
+          "column": "current_A",
+          "min_value": -400.0,
+          "max_value": 400.0
+        },
+        "meta": {},
+        "id": "6922222b-b30f-4570-b0dd-14ce4763a186",
+        "severity": "warning"
+      },
+      "result": {
+        "element_count": 200609,
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0,
+        "partial_unexpected_list": [],
+        "missing_count": 0,
+        "missing_percent": 0.0,
+        "unexpected_percent_total": 0.0,
+        "unexpected_percent_nonmissing": 0.0,
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": []
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    },
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_column_values_to_be_between",
+        "kwargs": {
+          "batch_id": "battery_pandas-telemetry",
+          "column": "regenerative_braking_Ah",
+          "min_value": 0.0,
+          "max_value": 5.0
+        },
+        "meta": {},
+        "id": "459b3846-d8be-4002-bd7f-43d4af7f9b65",
+        "severity": "warning"
+      },
+      "result": {
+        "element_count": 200609,
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0,
+        "partial_unexpected_list": [],
+        "missing_count": 0,
+        "missing_percent": 0.0,
+        "unexpected_percent_total": 0.0,
+        "unexpected_percent_nonmissing": 0.0,
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": []
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    },
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_column_values_to_be_between",
+        "kwargs": {
+          "batch_id": "battery_pandas-telemetry",
+          "column": "payload_kg",
+          "min_value": 0.0,
+          "max_value": 500.0
+        },
+        "meta": {},
+        "id": "5fcab850-4798-461c-842c-b7de575a7dd6",
+        "severity": "warning"
+      },
+      "result": {
+        "element_count": 200609,
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0,
+        "partial_unexpected_list": [],
+        "missing_count": 0,
+        "missing_percent": 0.0,
+        "unexpected_percent_total": 0.0,
+        "unexpected_percent_nonmissing": 0.0,
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": []
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    },
+    {
+      "success": true,
+      "expectation_config": {
+        "type": "expect_column_values_to_be_between",
+        "kwargs": {
+          "batch_id": "battery_pandas-telemetry",
+          "column": "mileage_km",
+          "min_value": 0.0,
+          "max_value": 1000000.0
+        },
+        "meta": {},
+        "id": "5a4a2c64-25af-4c98-b780-52167d1fa25e",
+        "severity": "warning"
+      },
+      "result": {
+        "element_count": 200609,
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0,
+        "partial_unexpected_list": [],
+        "missing_count": 0,
+        "missing_percent": 0.0,
+        "unexpected_percent_total": 0.0,
+        "unexpected_percent_nonmissing": 0.0,
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": []
+      },
+      "meta": {},
+      "exception_info": {
+        "raised_exception": false,
+        "exception_traceback": null,
+        "exception_message": null
+      }
+    }
+  ],
+  "suite_name": "battery_telemetry_v4_suite",
+  "suite_parameters": {},
+  "statistics": {
+    "evaluated_expectations": 33,
+    "successful_expectations": 33,
+    "unsuccessful_expectations": 0,
+    "success_percent": 100.0
+  },
+  "meta": {
+    "great_expectations_version": "1.18.1",
+    "batch_spec": {
+      "batch_data": "PandasDataFrame"
+    },
+    "batch_markers": {
+      "ge_load_time": "20260621T005756.187638Z",
+      "pandas_data_fingerprint": "cfa4ee57b9549b5263db11c7455065c4"
+    },
+    "active_batch_definition": {
+      "datasource_name": "battery_pandas",
+      "data_connector_name": "fluent",
+      "data_asset_name": "telemetry",
+      "batch_identifiers": {
+        "dataframe": "<DATAFRAME>"
+      }
+    }
+  },
+  "id": null
+}
